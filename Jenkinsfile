@@ -193,7 +193,8 @@ pipeline {
                         }
                     }
                 }
-
+            }
+        }
         // Run quick fp32 tests
         stage("Fast full precision"){
             parallel{
