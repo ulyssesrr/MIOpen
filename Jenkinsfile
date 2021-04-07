@@ -158,8 +158,15 @@ pipeline {
     options {
         parallelsAlwaysFailFast()
     }
+    parameters {
+        booleanParam(
+            name: "BUILD_CURRENT_STAGE",
+            defaultValue: true,
+            description: "Run current stage")
+    }
     stages{
         stage("Static checks"){
+            when { expression { params.BUILD_CURRENT_STAGE } }
             parallel{
                 stage('Hip Tidy') {
                     agent{  label rocmnode("nogpu") }
@@ -226,6 +233,7 @@ pipeline {
             }
         }
         stage("Smoke Fp32"){
+            when { expression { params.BUILD_CURRENT_STAGE } }
             parallel{
                stage('Fp32 OpenCL Debug') {
                     agent{ label rocmnode("vega") }
@@ -311,6 +319,7 @@ pipeline {
             }
         }
         stage("Smoke Aux 1"){
+            when { expression { params.BUILD_CURRENT_STAGE } }
             parallel{
                 stage('Fp32 HipNoGPU Debug') {
                     agent{  label rocmnode("nogpu") }
@@ -381,6 +390,7 @@ pipeline {
             }
         }
         stage("Smoke Aux 2"){
+            when { expression { params.BUILD_CURRENT_STAGE } }
             parallel{
                 stage('Fp32 Hip Normal-Find') {
                     agent{ label rocmnode("vega") }
@@ -483,6 +493,7 @@ pipeline {
             }
         }
         stage("Full tests I"){
+            when { expression { params.BUILD_CURRENT_STAGE } }
             parallel{
                 stage('Fp32 OpenCL Debug + Codecov') {
                     agent{ label rocmnode("vega") }
@@ -505,6 +516,7 @@ pipeline {
             }
         }
         stage("Full tests II"){
+            when { expression { params.BUILD_CURRENT_STAGE } }
             parallel{
                 stage('Fp32 OpenCL Install All') {
                     agent{ label rocmnode("vega") }
@@ -527,6 +539,7 @@ pipeline {
             }
         }
         stage("Packages"){
+            when { expression { params.BUILD_CURRENT_STAGE } }
             parallel {
                 stage('OpenCL Package') {
                     agent{ label rocmnode("nogpu") }
