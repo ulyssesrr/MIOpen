@@ -21,7 +21,7 @@ MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_CONV_IMPLICIT_GEMM_BLOCK_SYNC_LDS_WITHOUT_SY
 #define WORKAROUND_SWDEV_231101 1
 // due to compiler bug, iGEMM xdlops kernels fail verification in some cases, if using "-O3" flag,
 // (but will pass verification with "-O1" flag)
-#define WORKAROUND_SWDEV_251757 1
+#define WORKAROUND_SWDEV_251757 0
 // although gfx1030 supports buffer instructions,but it not work properly when we use the
 // corresponding llvm intrinsic functions
 // so we disable using those llvm intrinsic functions on gfx1030
