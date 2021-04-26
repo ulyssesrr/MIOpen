@@ -184,7 +184,7 @@ pipeline {
             description: "")
         booleanParam(
             name: "SMOKE_MIOPENTENSILE_LATEST",
-            defaultValue: true,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "FULL_TESTS",
