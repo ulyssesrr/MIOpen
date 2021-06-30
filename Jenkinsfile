@@ -457,38 +457,6 @@ pipeline {
                         }
                     }
                 }
-                stage('Fp32 Hip MLIR Xdlops') {
-                    agent{ label rocmnode("gfx908") }
-                    environment{
-                        cmd = """
-                            ulimit -c unlimited
-                            cd build
-                            CXX=/opt/rocm/llvm/bin/clang++ cmake -DMIOPEN_USE_MLIR=On -DMIOPEN_TEST_GFX908=On -DBUILD_DEV=On -DCMAKE_BUILD_TYPE=release -DMIOPEN_TEST_FLAGS='--verbose --disable-verification-cache' ..
-                            CTEST_PARALLEL_LEVEL=4 MIOPEN_LOG_LEVEL=5 make -j\$(nproc) check
-                        """
-                    }
-                    steps{
-                        script{
-                            runDockerJob(cmd: cmd, gpu_arch: "gfx908", mlir_build: "ON")
-                        }
-                    }
-                }
-                stage('Fp16 Hip MLIR Xdlops') {
-                    agent{ label rocmnode("gfx908") }
-                    environment{
-                        cmd = """
-                            ulimit -c unlimited
-                            cd build
-                            CXX=/opt/rocm/llvm/bin/clang++ cmake  -DMIOPEN_TEST_HALF=On -DMIOPEN_USE_MLIR=On -DMIOPEN_TEST_GFX908=On -DBUILD_DEV=On -DCMAKE_BUILD_TYPE=release -DMIOPEN_TEST_FLAGS='--verbose --disable-verification-cache' ..
-                            CTEST_PARALLEL_LEVEL=4 MIOPEN_LOG_LEVEL=5 make -j\$(nproc) check
-                        """
-                    }
-                    steps{
-                        script{
-                            runDockerJob(cmd: cmd, gpu_arch: "gfx908", mlir_build: "ON")
-                        }
-                    }
-                }
             }
         }
         stage("Smoke MIOpenTensile Latest"){
