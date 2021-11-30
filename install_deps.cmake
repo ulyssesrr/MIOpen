@@ -42,6 +42,10 @@ endif()
 
 get_filename_component(PREFIX ${_PREFIX} ABSOLUTE)
 
+if(PARSE_--prefix)
+    set(ENV{PIP_CACHE_DIR} ${PREFIX}/cache)
+endif()
+
 find_program(VIRTUALENV_PYTHON_EXE python3)
 if(NOT VIRTUALENV_PYTHON_EXE)
     find_program(VIRTUALENV_PYTHON_EXE python)
