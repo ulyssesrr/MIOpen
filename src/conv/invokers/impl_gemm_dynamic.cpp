@@ -633,7 +633,7 @@ InvokerFactory MakeImplGemmDynamicForwardXdlopsNHWCInvokerFactory(
                 if(handle.IsProfilingEnabled())
                     elapsed += handle.GetKernelTime();
             }
-#if 0
+
             if(is_nchw)
             {
                 if(!trans_input_skippable)
@@ -655,7 +655,6 @@ InvokerFactory MakeImplGemmDynamicForwardXdlopsNHWCInvokerFactory(
                         elapsed += handle.GetKernelTime();
                 }
             }
-#endif
 
             opArgs[0] = (is_nchw && !trans_input_skippable) ? OpKernelArg(trans_input_buf.get())
                                                             : OpKernelArg(tensors.in);
@@ -685,7 +684,6 @@ InvokerFactory MakeImplGemmDynamicForwardXdlopsNHWCInvokerFactory(
                     elapsed += handle.GetKernelTime();
             }
 
-#if 0
             if(is_nchw && !trans_output_skippable)
             {
                 auto& karg_output = opArgsTrans[trans_output_idx];
@@ -695,7 +693,6 @@ InvokerFactory MakeImplGemmDynamicForwardXdlopsNHWCInvokerFactory(
                 if(handle.IsProfilingEnabled())
                     elapsed += handle.GetKernelTime();
             }
-#endif
 
             if(handle.IsProfilingEnabled())
             {
