@@ -568,7 +568,9 @@ InvokerFactory MakeImplGemmDynamicForwardXdlopsNHWCInvokerFactory(
         trans_output_size = trans_output_skippable ? 0 : trans_output.GetSize();
 
         trans_weight_offset = trans_input_offset + trans_input_size;
+        trans_weight_offset = ((trans_weight_offset + 127) >> 7) << 7;
         trans_output_offset = trans_weight_offset + trans_weight_size;
+        trans_output_offset = ((trans_output_offset + 127) >> 7) << 7;
 
         int idx = 0;
         if(!trans_input_skippable)
