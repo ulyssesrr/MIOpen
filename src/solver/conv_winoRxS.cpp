@@ -522,7 +522,7 @@ static bool IsApplicableBase(const ConvolutionContext& params)
 template <int Winodata, int Winofilter>
 bool ConvBinWinoRxS<Winodata, Winofilter>::IsApplicable(const ConvolutionContext& params) const
 {
-    if (miopen::EnvvarValue(MIOPEN_DEBUG_WINOGRAD_KERNEL_FORCE_APPLICABLE::value(), -1) != -1)
+    if(miopen::EnvvarValue(MIOPEN_DEBUG_WINOGRAD_KERNEL_FORCE_APPLICABLE::value(), -1) != -1)
         return miopen::EnvvarValue(MIOPEN_DEBUG_WINOGRAD_KERNEL_FORCE_APPLICABLE::value(), -1);
     if(miopen::IsDisabled(MIOPEN_DEBUG_AMD_WINOGRAD_RXS_F2X3{}) && IS2X3)
         return false;
