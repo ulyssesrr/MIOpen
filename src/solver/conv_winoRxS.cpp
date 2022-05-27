@@ -48,6 +48,8 @@ MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_AMD_WINOGRAD_RXS_F2X3_G1)
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_AMD_WINOGRAD_RXS_F3X2)
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_AMD_WINOGRAD_RXS_F3X2_PERF_VALS)
 
+MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_WINOGRAD_KERNEL_FORCE_APPLICABLE)
+
 #define MAX_CU_LIMIT 512
 
 #define IS2X3 (Winodata == 2 && Winofilter == 3)
@@ -520,6 +522,8 @@ static bool IsApplicableBase(const ConvolutionContext& params)
 template <int Winodata, int Winofilter>
 bool ConvBinWinoRxS<Winodata, Winofilter>::IsApplicable(const ConvolutionContext& params) const
 {
+    if (miopen::EnvvarValue(MIOPEN_DEBUG_WINOGRAD_KERNEL_FORCE_APPLICABLE::value(), -1) != -1)
+        return miopen::EnvvarValue(MIOPEN_DEBUG_WINOGRAD_KERNEL_FORCE_APPLICABLE::value(), -1);
     if(miopen::IsDisabled(MIOPEN_DEBUG_AMD_WINOGRAD_RXS_F2X3{}) && IS2X3)
         return false;
     if(miopen::IsDisabled(MIOPEN_DEBUG_AMD_WINOGRAD_RXS_F3X2{}) && IS3X2)
