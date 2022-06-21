@@ -55,6 +55,8 @@ MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_WINOGRAD_KERNEL_FORCE_APPLICABLE)
 #define IS2X3 (Winodata == 2 && Winofilter == 3)
 #define IS3X2 (Winodata == 3 && Winofilter == 2)
 
+#define WORKAROUND_SWDEV_334283
+
 /// \todo The model is well-defined in for filters sized up to 5.
 /// However, it seems producing valid results without this limitation,
 /// when used against simple GEMM WTI model (to select the fastest solver).
@@ -160,6 +162,7 @@ namespace {
     }
 // clang-format on
 
+#ifdef WORKAROUND_SWDEV_334283
 const int exceptional_cases[9][15] = {
 //   N, C,   H,    W,    K,   R, S, p_h/w, s_h/w, d_h/w, g, dir
     {1, 32,  3140, 4100, 32,  5, 5,  0, 0,  1, 1,  1, 1, 1, 1},
@@ -202,6 +205,7 @@ inline bool IsExceptionalCase(const int R,
     }
     return false;
 }
+#endif
 
 inline bool IsShaderContraintsMet(const int R,
                                   const int S,
@@ -214,9 +218,6 @@ inline bool IsShaderContraintsMet(const int R,
                                   const int N,
                                   const ConvolutionContext& params)
 {
-    // Workaround for NukeX cases debug
-    if (IsExceptionalCase(R, S, C, K, H, W, N, params)) return true;
-
     // Padding for bwd data shall not be negative.
     /// \todo Either remove WrW related code or re-use function from RxS
     if(params.direction.IsBackwardData())
@@ -498,6 +499,31 @@ static float GetWtiBase(const ConvolutionContext& params)
 
 static bool IsApplicableBase(const ConvolutionContext& params)
 {
+    #ifdef WORKAROUND_SWDEV_334283
+    if (params.direction.IsBackwardWrW())
+    {
+        if (IsExceptionalCase(params.in_height,
+                            params.in_width,
+                            params.batch_sz,
+                            params.n_inputs / params.group_counts,
+                            params.out_height,
+                            params.out_width,
+                            params.n_outputs / params.group_counts,
+                            params)) return true;
+    }
+    else
+    {
+        if (IsExceptionalCase(params.kernel_size_h,
+                            params.kernel_size_w,
+                            params.n_inputs / params.group_counts,
+                            params.n_outputs / params.group_counts,
+                            params.in_height,
+                            params.in_width,
+                            params.batch_sz,
+                            params)) return true;
+    }
+    #endif
+
     if(!params.Is2d())
         return false;
     if(!(params.IsFp32() || params.IsFp16()))
