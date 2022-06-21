@@ -164,43 +164,37 @@ namespace {
 
 #ifdef WORKAROUND_SWDEV_334283
 const int exceptional_cases[9][15] = {
-//   N, C,   H,    W,    K,   R, S, p_h/w, s_h/w, d_h/w, g, dir
-    {1, 32,  3140, 4100, 32,  5, 5,  0, 0,  1, 1,  1, 1, 1, 1},
-    {1, 6,   3140, 4100, 32,  5, 5,  0, 0,  1, 1,  1, 1, 1, 1},
-    {1, 32,  3136, 4096, 64,  4, 4,  1, 1,  2, 2,  1, 1, 1, 2},
-    {1, 64,  1572, 2052, 64,  5, 5,  0, 0,  1, 1,  1, 1, 1, 1},
-    {1, 128, 788,  1028, 128, 5, 5,  0, 0,  1, 1,  1, 1, 1, 1},
-    {1, 32,  3139, 4099, 64,  5, 5,  0, 0,  2, 2,  1, 1, 1, 1},
-    {1, 3,   3136, 4096, 32,  5, 5,  2, 2,  1, 1,  1, 1, 1, 2},
-    {1, 64,  1571, 2051, 128, 5, 5,  0, 0,  2, 2,  1, 1, 1, 1},
-    {1, 64,  1568, 2048, 128, 4, 4,  1, 1,  2, 2,  1, 1, 1, 2}
-};
+    //   N, C,   H,    W,    K,   R, S, p_h/w, s_h/w, d_h/w, g, dir
+    {1, 32, 3140, 4100, 32, 5, 5, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 6, 3140, 4100, 32, 5, 5, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 32, 3136, 4096, 64, 4, 4, 1, 1, 2, 2, 1, 1, 1, 2},
+    {1, 64, 1572, 2052, 64, 5, 5, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 128, 788, 1028, 128, 5, 5, 0, 0, 1, 1, 1, 1, 1, 1},
+    {1, 32, 3139, 4099, 64, 5, 5, 0, 0, 2, 2, 1, 1, 1, 1},
+    {1, 3, 3136, 4096, 32, 5, 5, 2, 2, 1, 1, 1, 1, 1, 2},
+    {1, 64, 1571, 2051, 128, 5, 5, 0, 0, 2, 2, 1, 1, 1, 1},
+    {1, 64, 1568, 2048, 128, 4, 4, 1, 1, 2, 2, 1, 1, 1, 2}};
 
-inline bool IsExceptionalCase(const int R,
-                              const int S,
-                              const int C,
-                              const int K,
-                              const int H,
-                              const int W,
-                              const int N,
-                              const ConvolutionContext& params)
+inline bool IsExceptionalCase(const ConvolutionContext& params)
 {
-    for (int i = 0; i < sizeof(exceptional_cases) / sizeof(exceptional_cases[0]); i++) {
-        if (N == exceptional_cases[i][0]
-         && C == exceptional_cases[i][1]
-         && H == exceptional_cases[i][2]
-         && W == exceptional_cases[i][3]
-         && K == exceptional_cases[i][4]
-         && R == exceptional_cases[i][5]
-         && S == exceptional_cases[i][6]
-         && params.pad_h == exceptional_cases[i][7]
-         && params.pad_w == exceptional_cases[i][8]
-         && params.kernel_stride_h == exceptional_cases[i][9]
-         && params.kernel_stride_w == exceptional_cases[i][10]
-         && params.kernel_dilation_h == exceptional_cases[i][11]
-         && params.kernel_dilation_w == exceptional_cases[i][12]
-         && params.group_counts == exceptional_cases[i][13]
-         && exceptional_cases[i][14] == 1 ? params.direction.IsForward() : params.direction.IsBackwardData())
+    for(int i = 0; i < sizeof(exceptional_cases) / sizeof(exceptional_cases[0]); i++)
+    {
+        if(params.batch_sz == exceptional_cases[i][0] &&
+                   params.n_inputs == exceptional_cases[i][1] &&
+                   params.in_height == exceptional_cases[i][2] &&
+                   params.in_width == exceptional_cases[i][3] &&
+                   params.n_outputs == exceptional_cases[i][4] &&
+                   params.kernel_size_h == exceptional_cases[i][5] &&
+                   params.kernel_size_w == exceptional_cases[i][6] &&
+                   params.pad_h == exceptional_cases[i][7] &&
+                   params.pad_w == exceptional_cases[i][8] &&
+                   params.kernel_stride_h == exceptional_cases[i][9] &&
+                   params.kernel_stride_w == exceptional_cases[i][10] &&
+                   params.kernel_dilation_h == exceptional_cases[i][11] &&
+                   params.kernel_dilation_w == exceptional_cases[i][12] &&
+                   params.group_counts == exceptional_cases[i][13] && exceptional_cases[i][14] == 1
+               ? params.direction.IsForward()
+               : params.direction.IsBackwardData())
             return true;
     }
     return false;
@@ -499,31 +493,6 @@ static float GetWtiBase(const ConvolutionContext& params)
 
 static bool IsApplicableBase(const ConvolutionContext& params)
 {
-    #ifdef WORKAROUND_SWDEV_334283
-    if (params.direction.IsBackwardWrW())
-    {
-        if (IsExceptionalCase(params.in_height,
-                            params.in_width,
-                            params.batch_sz,
-                            params.n_inputs / params.group_counts,
-                            params.out_height,
-                            params.out_width,
-                            params.n_outputs / params.group_counts,
-                            params)) return true;
-    }
-    else
-    {
-        if (IsExceptionalCase(params.kernel_size_h,
-                            params.kernel_size_w,
-                            params.n_inputs / params.group_counts,
-                            params.n_outputs / params.group_counts,
-                            params.in_height,
-                            params.in_width,
-                            params.batch_sz,
-                            params)) return true;
-    }
-    #endif
-
     if(!params.Is2d())
         return false;
     if(!(params.IsFp32() || params.IsFp16()))
@@ -556,7 +525,12 @@ static bool IsApplicableBase(const ConvolutionContext& params)
         && params.bias == 0
         && params.in_layout == "NCHW"))
         return false;
-    // clang-format on
+        // clang-format on
+
+#ifdef WORKAROUND_SWDEV_334283
+    if(IsExceptionalCase(params))
+        return true;
+#endif
 
     const auto n_inputs_per_group  = params.n_inputs / params.group_counts,
                n_outputs_per_group = params.n_outputs / params.group_counts;
