@@ -27,6 +27,7 @@
 #ifndef GUARD_MIOPEN_FIND_DB_HPP_
 #define GUARD_MIOPEN_FIND_DB_HPP_
 
+#include <miopen/config.h>
 #include <miopen/db.hpp>
 #include <miopen/db_path.hpp>
 #include <miopen/db_record.hpp>
@@ -72,14 +73,14 @@ bool CheckInvokerSupport(const std::string& algo);
 template <class TDb>
 class FindDbRecord_t
 {
-    private:
+private:
     template <class TTestDb>
     using is_find_t = std::enable_if_t<std::is_same<TTestDb, UserFindDb>::value, int>;
 
     template <class TTestDb>
     using is_immediate_t = std::enable_if_t<std::is_same<TTestDb, FindDb>::value, int>;
 
-    public:
+public:
     FindDbRecord_t(const FindDbRecord_t&) = delete;
     FindDbRecord_t& operator=(const FindDbRecord_t&) = delete;
 
@@ -159,7 +160,7 @@ class FindDbRecord_t
         return ret;
     }
 
-    private:
+private:
     std::string path;
     std::string installed_path;
     boost::optional<DbTimer<TDb>> db;
