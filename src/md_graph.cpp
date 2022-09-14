@@ -1193,7 +1193,11 @@ void FusionMDGraph::Reset()
 
 // guard for debug only
 #define MIOPEN_ENUM_STR(x) std::pair<decltype(x), std::string>(x, #x)
+#ifdef CPPCHECK
+#define MIOPEN_ENUM_ARR(...) make_array()
+#else
 #define MIOPEN_ENUM_ARR(...) make_array(MIOPEN_PP_TRANSFORM_ARGS(MIOPEN_ENUM_STR, __VA_ARGS__))
+#endif
 
 template <class U>
 std::unordered_map<int, std::string> enum_map(U lst)

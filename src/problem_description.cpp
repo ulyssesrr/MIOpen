@@ -53,6 +53,7 @@ void ProblemDescription::Serialize(std::ostream& stream) const
     // 576-4-4-1x1-192-4-4-8-1x1-2x2-3x3-0-NCHW-FP32-F
     // Problem description with non-default layout
     // 576-4-4-1x1-192-4-4-8-1x1-2x2-3x3-0-NHWC-NCHW-NCHW-FP32-F
+    // C-HxW-XxY-K-OHxOW-N-padhxpadw-stride-dilation-0-xlayout-wlayout-ylayout-type-F
     // clang-format off
     stream << n_inputs;
     stream << sep << PrintDHW(sep, spatial_dims, in_depth, in_height, in_width);

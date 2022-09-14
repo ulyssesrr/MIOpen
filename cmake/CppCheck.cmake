@@ -96,7 +96,6 @@ macro(enable_cppcheck)
             ${CPPCHECK_FORCE}
             --cppcheck-build-dir=${CPPCHECK_BUILD_DIR}
             --platform=native
-            --template=gcc
             --error-exitcode=1
             -j ${CPPCHECK_JOBS}
             ${CPPCHECK_DEFINES}
