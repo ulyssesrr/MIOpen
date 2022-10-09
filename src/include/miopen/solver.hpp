@@ -4895,7 +4895,7 @@ struct ConvHipImplicitGemmBwdDataXdlops final
     void RunCKSolution(const Handle& handle,
                        const AnyInvokeParams& primitive_parameters,
                        const ConvolutionContext& ctx,
-                       const PerformanceConfigHipImplicitGemmFwdXdlops& config) const;
+                       const PerformanceConfigHipImplicitGemmBwdDataXdlops& config) const;
 };
 
 struct AnySolver;
