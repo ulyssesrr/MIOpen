@@ -337,11 +337,9 @@ bool ConvHipImplicitGemmWrwXdlops::IsApplicable(const ConvolutionContext& ctx) c
        ctx.problem.conv_problem.GetWeightsDataType() != ctx.problem.conv_problem.GetOutDataType() ||
        ctx.problem.conv_problem.GetInDataType() != ctx.problem.conv_problem.GetOutDataType())
         return false;
-    if(!ctx.problem.direction.IsForward())
+    if(!ctx.problem.direction.IsBackwardWrW())
         return false;
     if(!ctx.problem.Is2d())
-        return false;
-    if(ctx.GetStream().GetDeviceName() != "gfx908")
         return false;
     if(!ctx.problem.IsLayoutNHWC())
         return false;
