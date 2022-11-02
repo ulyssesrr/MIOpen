@@ -771,10 +771,11 @@ struct PerformanceImplicitGemm : PerfConfigBase<PerformanceImplicitGemm>
         f(self.WeiBlockCopyClusterLengths_K, "WeiBlockCopyClusterLengths_K");
     }
 
-    void HeuristicInit(const ConvolutionContext& config);
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool IsValidValue() const;
     bool SetNextValue(const ConvolutionContext&);
-    bool IsValid(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
     bool operator==(const PerformanceImplicitGemm& other) const;
 };
 
@@ -809,7 +810,8 @@ struct PerformanceImplicitGemmV4R1 : public PerformanceImplicitGemm
 
     PerformanceImplicitGemmV4R1(bool spare) : PerformanceImplicitGemm(spare) {}
 
-    bool IsValid(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
 };
 
 struct PerformanceImplicitGemmV4R4Fwd : PerfConfigBase<PerformanceImplicitGemmV4R4Fwd>
@@ -851,19 +853,18 @@ struct PerformanceImplicitGemmV4R4Fwd : PerfConfigBase<PerformanceImplicitGemmV4
         f(self.GemmNPerThread, "GemmNPerThread");
     }
 
-    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext& ctx) const;
+    std::tuple<int, bool> CalculateGridSize(const ProblemDescription&) const;
+    std::tuple<int, int, int, int, bool> CalculateBlockGemmPerformanceParameters() const;
+    std::tuple<int, int, int, int, bool> CalculateGemmABlockCopyPerformanceParameters() const;
     std::tuple<int, int, int, int, bool>
-    CalculateBlockGemmPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
+    CalculateGemmBBlockCopyPerformanceParameters(const ProblemDescription&) const;
     std::tuple<int, bool>
-    CalculateGemmCThreadCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ConvolutionContext& ctx) const;
+    CalculateGemmCThreadCopyPerformanceParameters(const ProblemDescription&) const;
+    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ProblemDescription&) const;
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
-    void HeuristicInit(const ConvolutionContext& ctx);
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx.problem); }
+    bool IsValid(const ProblemDescription&) const;
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool SetNextValue(const ConvolutionContext&);
 };
 
@@ -906,19 +907,18 @@ struct PerformanceImplicitGemmV4R4WrW : PerfConfigBase<PerformanceImplicitGemmV4
         f(self.GemmNPerThread, "GemmNPerThread");
     }
 
-    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext& ctx) const;
+    std::tuple<int, bool> CalculateGridSize(const ProblemDescription&) const;
+    std::tuple<int, int, int, int, bool> CalculateBlockGemmPerformanceParameters() const;
+    std::tuple<int, int, int, int, bool> CalculateGemmABlockCopyPerformanceParameters() const;
     std::tuple<int, int, int, int, bool>
-    CalculateBlockGemmPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
+    CalculateGemmBBlockCopyPerformanceParameters(const ProblemDescription&) const;
     std::tuple<int, bool>
-    CalculateGemmCThreadCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ConvolutionContext& ctx) const;
+    CalculateGemmCThreadCopyPerformanceParameters(const ProblemDescription&) const;
+    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ProblemDescription&) const;
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
-    void HeuristicInit(const ConvolutionContext& ctx);
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx.problem); }
+    bool IsValid(const ProblemDescription&) const;
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool SetNextValue(const ConvolutionContext&);
 };
 
@@ -1097,43 +1097,113 @@ struct PerformanceImplicitGemmBwdDataV4R1Xdlops
 
 struct ConvHipImplicitGemmV4R1Fwd final : ConvTunableSolver<PerformanceImplicitGemmV4R1>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmV4R1Fwd>();
     }
 
     PerformanceImplicitGemmV4R1
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
     bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                                  const PerformanceImplicitGemmV4R1& c) const override;
+                                  const PerformanceImplicitGemmV4R1& config) const override
+    {
+        return IsValidPerformanceConfig(ctx, ctx.problem, config);
+    }
 
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceImplicitGemmV4R1& config) const override;
+                             const PerformanceImplicitGemmV4R1& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
 
+    PerformanceImplicitGemmV4R1 Search(const ConvolutionContext& ctx,
+                                       const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
+
+private:
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceImplicitGemmV4R1 GetDefaultPerformanceConfig(const ConvolutionContext&,
+                                                            const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ConvolutionContext&,
+                                  const ProblemDescription&,
+                                  const PerformanceImplicitGemmV4R1&) const;
     PerformanceImplicitGemmV4R1 Search(const ConvolutionContext&,
-                                       const AnyInvokeParams& invoke_ctx) const override;
+                                       const ProblemDescription&,
+                                       const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmV4R1&) const;
 };
 
 struct ConvHipImplicitGemmV4R4Fwd final : ConvTunableSolver<PerformanceImplicitGemmV4R4Fwd>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmV4R4Fwd>();
     }
 
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     PerformanceImplicitGemmV4R4Fwd
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
     bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                                  const PerformanceImplicitGemmV4R4Fwd& config) const override;
-    PerformanceImplicitGemmV4R4Fwd Search(const ConvolutionContext&,
-                                          const AnyInvokeParams& invoke_ctx) const override;
+                                  const PerformanceImplicitGemmV4R4Fwd& config) const override
+    {
+        return IsValidPerformanceConfig(ctx.problem, config);
+    }
+    PerformanceImplicitGemmV4R4Fwd Search(const ConvolutionContext& ctx,
+                                          const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceImplicitGemmV4R4Fwd& config) const override;
+                             const PerformanceImplicitGemmV4R4Fwd& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
 
 private:
-    static std::tuple<int, int, int> CalculateGemmSize(const ConvolutionContext& ctx);
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceImplicitGemmV4R4Fwd GetDefaultPerformanceConfig(const ConvolutionContext&,
+                                                               const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ProblemDescription&,
+                                  const PerformanceImplicitGemmV4R4Fwd&) const;
+    PerformanceImplicitGemmV4R4Fwd Search(const ConvolutionContext&,
+                                          const ProblemDescription&,
+                                          const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmV4R4Fwd&) const;
+
+    static std::tuple<int, int, int> CalculateGemmSize(const ProblemDescription&);
 
     friend struct PerformanceImplicitGemmV4R4Fwd;
 };
@@ -1341,23 +1411,57 @@ private:
 
 struct ConvHipImplicitGemmV4R4WrW final : ConvTunableSolver<PerformanceImplicitGemmV4R4WrW>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmV4R4WrW>();
     }
 
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     PerformanceImplicitGemmV4R4WrW
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
     bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                                  const PerformanceImplicitGemmV4R4WrW& config) const override;
-    PerformanceImplicitGemmV4R4WrW Search(const ConvolutionContext&,
-                                          const AnyInvokeParams& invoke_ctx) const override;
+                                  const PerformanceImplicitGemmV4R4WrW& config) const override
+    {
+        return IsValidPerformanceConfig(ctx.problem, config);
+    }
+    PerformanceImplicitGemmV4R4WrW Search(const ConvolutionContext& ctx,
+                                          const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceImplicitGemmV4R4WrW& config) const override;
+                             const PerformanceImplicitGemmV4R4WrW& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
 
 private:
-    static std::tuple<int, int, int> CalculateGemmSize(const ConvolutionContext& ctx);
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceImplicitGemmV4R4WrW GetDefaultPerformanceConfig(const ConvolutionContext&,
+                                                               const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ProblemDescription&,
+                                  const PerformanceImplicitGemmV4R4WrW&) const;
+    PerformanceImplicitGemmV4R4WrW Search(const ConvolutionContext&,
+                                          const ProblemDescription&,
+                                          const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmV4R4WrW&) const;
+
+    static std::tuple<int, int, int> CalculateGemmSize(const ProblemDescription&);
 
     friend struct PerformanceImplicitGemmV4R4WrW;
 };
@@ -1548,20 +1652,21 @@ struct PerformanceImplicitGemmForwardV4R4Xdlops
 
     bool operator==(const PerformanceImplicitGemmForwardV4R4Xdlops& other) const;
 
-    void HeuristicInit(const ConvolutionContext& ctx);
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool SetNextValue(const ConvolutionContext&);
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
-    bool IsReallyValid(const ConvolutionContext& ctx) const;
-    bool IsFastToBeUsedForTuning(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsReallyValid(const ProblemDescription&) const;
+    bool IsFastToBeUsedForTuning(const ConvolutionContext&, const ProblemDescription&) const;
 
     std::tuple<int, bool> CalculateBlockSize() const;
-    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext& ctx) const;
+    std::tuple<int, bool> CalculateGridSize(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
+    CalculateGemmABlockCopyPerformanceParameters(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ConvolutionContext& ctx) const;
+    CalculateGemmBBlockCopyPerformanceParameters(const ProblemDescription&) const;
+    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ProblemDescription&) const;
 };
 
 struct PerformanceImplicitGemmForwardV4R5Xdlops
@@ -1605,20 +1710,21 @@ struct PerformanceImplicitGemmForwardV4R5Xdlops
 
     bool operator==(const PerformanceImplicitGemmForwardV4R5Xdlops& other) const;
 
-    void HeuristicInit(const ConvolutionContext& ctx);
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool SetNextValue(const ConvolutionContext&);
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
-    bool IsReallyValid(const ConvolutionContext& ctx) const;
-    bool IsFastToBeUsedForTuning(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsReallyValid(const ProblemDescription&) const;
+    bool IsFastToBeUsedForTuning(const ConvolutionContext&, const ProblemDescription&) const;
 
     std::tuple<int, bool> CalculateBlockSize() const;
-    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext& ctx) const;
+    std::tuple<int, bool> CalculateGridSize(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
+    CalculateGemmABlockCopyPerformanceParameters(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ConvolutionContext& ctx) const;
+    CalculateGemmBBlockCopyPerformanceParameters(const ProblemDescription&) const;
+    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ProblemDescription&) const;
 };
 
 struct PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
@@ -1664,20 +1770,21 @@ struct PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
 
     bool operator==(const PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm& other) const;
 
-    void HeuristicInit(const ConvolutionContext& ctx);
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool SetNextValue(const ConvolutionContext&);
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
-    bool IsReallyValid(const ConvolutionContext& ctx) const;
-    bool IsFastToBeUsedForTuning(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsReallyValid(const ProblemDescription&) const;
+    bool IsFastToBeUsedForTuning(const ConvolutionContext&, const ProblemDescription&) const;
 
     std::tuple<int, bool> CalculateBlockSize() const;
-    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext& ctx) const;
+    std::tuple<int, bool> CalculateGridSize(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
+    CalculateGemmABlockCopyPerformanceParameters(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ConvolutionContext& ctx) const;
+    CalculateGemmBBlockCopyPerformanceParameters(const ProblemDescription&) const;
+    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ProblemDescription&) const;
 };
 
 struct PerformanceImplicitGemmBwdV1R1Xdlops : PerfConfigBase<PerformanceImplicitGemmBwdV1R1Xdlops>
@@ -1730,23 +1837,58 @@ struct PerformanceImplicitGemmBwdV1R1Xdlops : PerfConfigBase<PerformanceImplicit
 struct ConvHipImplicitGemmForwardV4R4Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmForwardV4R4Xdlops>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmForwardV4R4Xdlops>();
     }
 
     PerformanceImplicitGemmForwardV4R4Xdlops
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
-    bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                                  const PerformanceImplicitGemmForwardV4R4Xdlops& c) const override;
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
+    bool
+    IsValidPerformanceConfig(const ConvolutionContext& ctx,
+                             const PerformanceImplicitGemmForwardV4R4Xdlops& config) const override
+    {
+        return IsValidPerformanceConfig(ctx.problem, config);
+    }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceImplicitGemmForwardV4R4Xdlops& config) const override;
+                             const PerformanceImplicitGemmForwardV4R4Xdlops& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
     PerformanceImplicitGemmForwardV4R4Xdlops
-    Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const override;
+    Search(const ConvolutionContext& ctx, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
 
 private:
-    static std::tuple<int, int, int, int> CalculateGemmSize(const ConvolutionContext& ctx);
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceImplicitGemmForwardV4R4Xdlops
+    GetDefaultPerformanceConfig(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ProblemDescription&,
+                                  const PerformanceImplicitGemmForwardV4R4Xdlops&) const;
+    PerformanceImplicitGemmForwardV4R4Xdlops Search(const ConvolutionContext&,
+                                                    const ProblemDescription&,
+                                                    const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmForwardV4R4Xdlops&) const;
+
+    static std::tuple<int, int, int, int> CalculateGemmSize(const ProblemDescription&);
 
     friend struct PerformanceImplicitGemmForwardV4R4Xdlops;
 };
@@ -1754,26 +1896,62 @@ private:
 struct ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm final
     : ConvTunableSolver<PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm>();
     }
 
     PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
     bool IsValidPerformanceConfig(
         const ConvolutionContext& ctx,
-        const PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm& c) const override;
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+        const PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm& config) const override
+    {
+        return IsValidPerformanceConfig(ctx.problem, config);
+    }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     ConvSolution
     GetSolution(const ConvolutionContext& ctx,
-                const PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm& config) const override;
+                const PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
     PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
-    Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const override;
+    Search(const ConvolutionContext& ctx, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
 
 private:
-    static std::tuple<int, int, int, int, int, int, int> CalculateGemmSize(
-        const ConvolutionContext& ctx, int GemmMFactor, int GemmNFactor, int GemmKFactor);
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
+    GetDefaultPerformanceConfig(const ConvolutionContext&, const ProblemDescription&) const;
+    bool
+    IsValidPerformanceConfig(const ProblemDescription&,
+                             const PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm&) const;
+    PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm
+    Search(const ConvolutionContext&,
+           const ProblemDescription&,
+           const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm&) const;
+
+    static std::tuple<int, int, int, int, int, int, int>
+    CalculateGemmSize(const ProblemDescription&, int GemmMFactor, int GemmNFactor, int GemmKFactor);
 
     friend struct PerformanceImplicitGemmForwardV4R4Xdlops_Padded_Gemm;
 };
@@ -1781,38 +1959,110 @@ private:
 struct ConvHipImplicitGemmForwardV4R5Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmForwardV4R5Xdlops>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmForwardV4R5Xdlops>();
     }
 
     PerformanceImplicitGemmForwardV4R5Xdlops
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
-    bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                                  const PerformanceImplicitGemmForwardV4R5Xdlops& c) const override;
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
+    bool
+    IsValidPerformanceConfig(const ConvolutionContext& ctx,
+                             const PerformanceImplicitGemmForwardV4R5Xdlops& config) const override
+    {
+        return IsValidPerformanceConfig(ctx.problem, config);
+    }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceImplicitGemmForwardV4R5Xdlops& config) const override;
+                             const PerformanceImplicitGemmForwardV4R5Xdlops& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
     PerformanceImplicitGemmForwardV4R5Xdlops
-    Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const override;
+    Search(const ConvolutionContext& ctx, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
+
+private:
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceImplicitGemmForwardV4R5Xdlops
+    GetDefaultPerformanceConfig(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ProblemDescription&,
+                                  const PerformanceImplicitGemmForwardV4R5Xdlops&) const;
+    PerformanceImplicitGemmForwardV4R5Xdlops Search(const ConvolutionContext&,
+                                                    const ProblemDescription&,
+                                                    const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmForwardV4R5Xdlops&) const;
 };
 
 struct ConvHipImplicitGemmV4R1WrW final : ConvTunableSolver<PerformanceImplicitGemmV4R1>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmV4R1WrW>();
     }
 
     PerformanceImplicitGemmV4R1
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
     bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                                  const PerformanceImplicitGemmV4R1& c) const override;
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+                                  const PerformanceImplicitGemmV4R1& config) const override
+    {
+        return IsValidPerformanceConfig(ctx, ctx.problem, config);
+    }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceImplicitGemmV4R1& config) const override;
+                             const PerformanceImplicitGemmV4R1& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
+    PerformanceImplicitGemmV4R1 Search(const ConvolutionContext& ctx,
+                                       const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
+
+private:
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceImplicitGemmV4R1 GetDefaultPerformanceConfig(const ConvolutionContext&,
+                                                            const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ConvolutionContext&,
+                                  const ProblemDescription&,
+                                  const PerformanceImplicitGemmV4R1&) const;
     PerformanceImplicitGemmV4R1 Search(const ConvolutionContext&,
-                                       const AnyInvokeParams& invoke_ctx) const override;
+                                       const ProblemDescription&,
+                                       const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmV4R1&) const;
 };
 
 struct ConvHipImplicitGemmBwdDataV1R1 final : ConvTunableSolver<PerformanceImplicitGemmBwdDataV1R1>
@@ -2754,17 +3004,30 @@ extern template struct ConvMPBidirectWinograd_xdlops<6, 3>;
 template <int WinoDataH, int WinoFilterH, int WinoDataW = WinoDataH, int WinoFilterW = WinoFilterH>
 struct ConvWinograd3x3MultipassWrW final : ConvSolver
 {
+    // To suppress -Woverloaded-virtual
+    using ConvSolver::GetWorkspaceSize;
+    using ConvSolver::IsApplicable;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<
             ConvWinograd3x3MultipassWrW<WinoDataH, WinoFilterH, WinoDataW, WinoFilterW>>();
     }
 
-    bool IsApplicable(const ConvolutionContext& params) const override;
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     bool IsDynamic() const override { return true; }
-    size_t GetWorkspaceSize(const ConvolutionContext& params) const override;
+    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override
+    {
+        return GetWorkspaceSize(ctx.problem);
+    }
     bool MayNeedWorkspace() const override { return true; }
-    ConvSolution GetSolution(const ConvolutionContext& params) const;
+    ConvSolution GetSolution(const ConvolutionContext& ctx) const
+    {
+        return GetSolution(ctx, ctx.problem);
+    }
 
     // kernel_file_name for solver identification
     static std::string GetSolverFileNames(int id)
@@ -2796,7 +3059,13 @@ struct ConvWinograd3x3MultipassWrW final : ConvSolver
     }
 
 private:
-    InvokerFactory PrepareInvokerFactory(const ConvolutionContext& params, std::size_t ws_sz) const;
+    bool IsApplicable(const ExecutionContext&, const ProblemDescription&) const;
+    size_t GetWorkspaceSize(const ProblemDescription&) const;
+    ConvSolution GetSolution(const ExecutionContext&, const ProblemDescription&) const;
+
+    InvokerFactory PrepareInvokerFactory(const ExecutionContext&,
+                                         const ProblemDescription&,
+                                         std::size_t ws_sz) const;
 };
 
 // To suppress misleading clang warnings
@@ -3119,37 +3388,80 @@ struct PerformanceConfigConvOclBwdWrw2
     int GetNumOutChannelTiles() const { return n_out_channels_tiles; }
     int GetNumOutRowsPerIterPerWork() const { return n_out_rows_in_lcl; } // clang-format on
 
-    void HeuristicInit(const ConvolutionContext& params);
+    void HeuristicInit(const ProblemDescription&);
     bool IsValidValue() const;
-    bool SetNextValue(const ConvolutionContext& config);
-    bool IsValid(const ConvolutionContext& params) const;
+    bool SetNextValue(const ConvolutionContext&);
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
     bool operator==(const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>& other) const;
 };
 
 template <int N_BATCH_LOOPS>
 struct ConvOclBwdWrW2 : ConvTunableSolver<PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver<PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>>::IsApplicable;
+    using ConvTunableSolver<PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>>::GetWorkspaceSize;
+    using ConvTunableSolver<
+        PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>>::GetDefaultPerformanceConfig;
+    using ConvTunableSolver<
+        PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>>::IsValidPerformanceConfig;
+    using ConvTunableSolver<PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>>::Search;
+    using ConvTunableSolver<PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>>::GetSolution;
+
     const std::string& SolverDbId() const override
     {
         return this->template GetSolverDbId<ConvOclBwdWrW2<N_BATCH_LOOPS>>();
     }
 
     PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>
-    GetDefaultPerformanceConfig(const ConvolutionContext&) const override;
-    bool
-    IsValidPerformanceConfig(const ConvolutionContext&,
-                             const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>&) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx.problem);
+    }
+    bool IsValidPerformanceConfig(
+        const ConvolutionContext& ctx,
+        const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>& config) const override
+    {
+        return IsValidPerformanceConfig(ctx, ctx.problem, config);
+    }
     PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>
-    Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const override;
-    bool IsApplicable(const ConvolutionContext& params) const override;
-    size_t GetWorkspaceSize(const ConvolutionContext& params) const override;
+    Search(const ConvolutionContext& ctx, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
+    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override
+    {
+        return GetWorkspaceSize(ctx.problem);
+    }
     bool MayNeedWorkspace() const override { return true; }
     ConvSolution
-    GetSolution(const ConvolutionContext& params,
-                const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>& config) const override;
+    GetSolution(const ConvolutionContext& ctx,
+                const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
 
 protected:
-    bool IsApplicableBase(const ConvolutionContext& params) const;
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    size_t GetWorkspaceSize(const ProblemDescription&) const;
+    PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>
+    GetDefaultPerformanceConfig(const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ConvolutionContext&,
+                                  const ProblemDescription&,
+                                  const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>&) const;
+    PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS> Search(const ConvolutionContext&,
+                                                          const ProblemDescription&,
+                                                          const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceConfigConvOclBwdWrw2<N_BATCH_LOOPS>&) const;
+
+    bool IsApplicableBase(const ConvolutionContext&, const ProblemDescription&) const;
 };
 
 // To suppress misleading clang warnings
@@ -3180,15 +3492,27 @@ extern template struct ConvOclBwdWrW2<16>;
 /// would never beat 3x3 and 1x1 assembly WrW kernels, even after tuning.
 struct ConvOclBwdWrW2NonTunable final : ConvOclBwdWrW2<1>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvOclBwdWrW2<1>::IsApplicable;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvOclBwdWrW2NonTunable>();
     }
 
-    bool IsApplicable(const ConvolutionContext& params) const override;
-    ConvSolution GetSolution(const ConvolutionContext& params) const;
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
+    ConvSolution GetSolution(const ConvolutionContext& ctx) const
+    {
+        return GetSolution(ctx, ctx.problem);
+    }
 
 private:
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    ConvSolution GetSolution(const ConvolutionContext&, const ProblemDescription&) const;
+
     // This function dervied from ConvOclBwdWrW2 is declared private
     // so that this solver is not marked searchable/tunable.
     using ConvOclBwdWrW2<1>::GetDefaultPerformanceConfig;
@@ -3314,43 +3638,86 @@ struct PerformanceImplicitGemmWrwV4R4Xdlops : PerfConfigBase<PerformanceImplicit
 
     bool operator==(const PerformanceImplicitGemmWrwV4R4Xdlops& other) const;
 
-    void HeuristicInit(const ConvolutionContext& ctx);
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool SetNextValue(const ConvolutionContext&);
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
-    bool IsReallyValid(const ConvolutionContext& ctx) const;
-    bool IsFastToBeUsedForTuning(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsReallyValid(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsFastToBeUsedForTuning(const ConvolutionContext&, const ProblemDescription&) const;
 
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmSizeAndGemmKBlock(const ConvolutionContext& ctx) const;
+    CalculateGemmSizeAndGemmKBlock(const ConvolutionContext&, const ProblemDescription&) const;
     std::tuple<int, bool> CalculateBlockSize() const;
-    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext& ctx) const;
+    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext&,
+                                            const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
+    CalculateGemmABlockCopyPerformanceParameters(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ConvolutionContext& ctx) const;
+    CalculateGemmBBlockCopyPerformanceParameters(const ProblemDescription&) const;
+    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ProblemDescription&) const;
 };
 
 struct ConvHipImplicitGemmWrwV4R4Xdlops final
     : ConvTunableSolver<PerformanceImplicitGemmWrwV4R4Xdlops>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::GetWorkspaceSize;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmWrwV4R4Xdlops>();
     }
 
     PerformanceImplicitGemmWrwV4R4Xdlops
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
-    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
+    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override
+    {
+        return GetWorkspaceSize(ctx.problem);
+    }
     bool MayNeedWorkspace() const override { return true; }
     bool IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                                  const PerformanceImplicitGemmWrwV4R4Xdlops& c) const override;
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+                                  const PerformanceImplicitGemmWrwV4R4Xdlops& config) const override
+    {
+        return IsValidPerformanceConfig(ctx, ctx.problem, config);
+    }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceImplicitGemmWrwV4R4Xdlops& config) const override;
+                             const PerformanceImplicitGemmWrwV4R4Xdlops& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
+    PerformanceImplicitGemmWrwV4R4Xdlops Search(const ConvolutionContext& ctx,
+                                                const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
+
+private:
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    size_t GetWorkspaceSize(const ProblemDescription&) const;
+    PerformanceImplicitGemmWrwV4R4Xdlops
+    GetDefaultPerformanceConfig(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ConvolutionContext&,
+                                  const ProblemDescription&,
+                                  const PerformanceImplicitGemmWrwV4R4Xdlops&) const;
     PerformanceImplicitGemmWrwV4R4Xdlops Search(const ConvolutionContext&,
-                                                const AnyInvokeParams& invoke_ctx) const override;
+                                                const ProblemDescription&,
+                                                const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmWrwV4R4Xdlops&) const;
 };
 
 struct PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
@@ -3394,46 +3761,89 @@ struct PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
 
     bool operator==(const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm& other) const;
 
-    void HeuristicInit(const ConvolutionContext& ctx);
+    void HeuristicInit(const ConvolutionContext&, const ProblemDescription&);
     bool SetNextValue(const ConvolutionContext&);
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
-    bool IsReallyValid(const ConvolutionContext& ctx) const;
-    bool IsFastToBeUsedForTuning(const ConvolutionContext& ctx) const;
-    int CalculateGemmKBlocks(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx, ctx.problem); }
+    bool IsValid(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsReallyValid(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsFastToBeUsedForTuning(const ConvolutionContext&, const ProblemDescription&) const;
 
     std::tuple<int, int, int, int, int, int, int, int, bool>
-    CalculateGemmSizeAndGemmKBlock(const ConvolutionContext& ctx) const;
+    CalculateGemmSizeAndGemmKBlock(const ConvolutionContext&, const ProblemDescription&) const;
     std::tuple<int, bool> CalculateBlockSize() const;
-    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext& ctx) const;
+    std::tuple<int, bool> CalculateGridSize(const ConvolutionContext&,
+                                            const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmABlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
+    CalculateGemmABlockCopyPerformanceParameters(const ProblemDescription&) const;
     std::tuple<int, int, int, int, int, bool>
-    CalculateGemmBBlockCopyPerformanceParameters(const ConvolutionContext& ctx) const;
-    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ConvolutionContext& ctx) const;
+    CalculateGemmBBlockCopyPerformanceParameters(const ProblemDescription&) const;
+    std::tuple<std::size_t, bool> CalculateLdsNumberOfByte(const ProblemDescription&) const;
 };
 
 struct ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm final
     : ConvTunableSolver<PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::GetWorkspaceSize;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm>();
     }
 
     PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
-    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override;
-    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx, ctx.problem);
+    }
+    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override
+    {
+        return GetWorkspaceSize(ctx.problem);
+    }
     bool MayNeedWorkspace() const override { return true; }
     bool IsValidPerformanceConfig(
         const ConvolutionContext& ctx,
-        const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm& c) const override;
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+        const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm& config) const override
+    {
+        return IsValidPerformanceConfig(ctx, ctx.problem, config);
+    }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     ConvSolution
     GetSolution(const ConvolutionContext& ctx,
-                const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm& config) const override;
+                const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
     PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
-    Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const override;
+    Search(const ConvolutionContext& ctx, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
+
+private:
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    size_t GetWorkspaceSize(const ProblemDescription&) const;
+    PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
+    GetDefaultPerformanceConfig(const ConvolutionContext&, const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ConvolutionContext&,
+                                  const ProblemDescription&,
+                                  const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm&) const;
+    PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm
+    Search(const ConvolutionContext&,
+           const ProblemDescription&,
+           const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceImplicitGemmWrwV4R4Xdlops_Padded_Gemm&) const;
 };
 
 struct PerformanceConvCkIgemmFwdV6r1DlopsNchw
@@ -5252,10 +5662,12 @@ struct PerformanceConfigHipImplicitGemmFwdXdlops
         : PerformanceConfigHipImplicitGemmFwdXdlops(0, "")
     {
     }
-    void HeuristicInit(const ConvolutionContext& ctx);
-    bool SetNextValue(const ConvolutionContext& ctx);
+    void HeuristicInit(const ProblemDescription&);
+    bool SetNextValue(const ConvolutionContext& ctx) { return SetNextValue(ctx.problem); }
+    bool SetNextValue(const ProblemDescription&);
     bool IsValidValue() const;
-    bool IsValid(const ConvolutionContext& ctx) const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx.problem); }
+    bool IsValid(const ProblemDescription&) const;
     template <typename Self, typename F>
     static void Visit(Self&& s, F f)
     {
@@ -5265,32 +5677,54 @@ struct PerformanceConfigHipImplicitGemmFwdXdlops
 
 private:
     template <typename DataType>
-    void Init(const ConvolutionContext& ctx);
+    void Init(const ProblemDescription&);
     template <typename DataType>
-    bool CheckIsSupportCKArgs(const ConvolutionContext& ctx) const;
+    bool CheckIsSupportCKArgs(const ProblemDescription&) const;
 };
 
 struct ConvHipImplicitGemmFwdXdlops final
     : ConvTunableSolver<PerformanceConfigHipImplicitGemmFwdXdlops>
 {
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
     const std::string& SolverDbId() const override
     {
         return GetSolverDbId<ConvHipImplicitGemmFwdXdlops>();
     }
 
     PerformanceConfigHipImplicitGemmFwdXdlops
-    GetDefaultPerformanceConfig(const ConvolutionContext&) const override;
-    bool IsValidPerformanceConfig(const ConvolutionContext&,
-                                  const PerformanceConfigHipImplicitGemmFwdXdlops&) const override;
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx.problem);
+    }
+    bool
+    IsValidPerformanceConfig(const ConvolutionContext& ctx,
+                             const PerformanceConfigHipImplicitGemmFwdXdlops& config) const override
+    {
+        return IsValidPerformanceConfig(ctx.problem, config);
+    }
     PerformanceConfigHipImplicitGemmFwdXdlops
-    Search(const ConvolutionContext&, const AnyInvokeParams& invoke_ctx) const override;
+    Search(const ConvolutionContext& ctx, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
     size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override;
     bool MayNeedWorkspace() const override { return false; }
-    bool IsApplicable(const ConvolutionContext& ctx) const override;
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
     bool IsDynamic() const override { return true; }
-    ConvSolution
-    GetSolution(const ConvolutionContext& ctx,
-                const PerformanceConfigHipImplicitGemmFwdXdlops& config) const override;
+    ConvSolution GetSolution(const ConvolutionContext& ctx,
+                             const PerformanceConfigHipImplicitGemmFwdXdlops& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
     // Magic Number Alert:
     // Naive convolutions have GetWti() that return very small value (0.01f).
     // This allows MIOpen to use Naive Solvers if no other applicable Solvers
@@ -5304,12 +5738,27 @@ struct ConvHipImplicitGemmFwdXdlops final
     float GetWti(const ConvolutionContext&) const override { return 0.02f; };
 
 private:
+<<<<<<< HEAD
+=======
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    PerformanceConfigHipImplicitGemmFwdXdlops
+    GetDefaultPerformanceConfig(const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ProblemDescription&,
+                                  const PerformanceConfigHipImplicitGemmFwdXdlops&) const;
+    PerformanceConfigHipImplicitGemmFwdXdlops Search(const ConvolutionContext&,
+                                                     const ProblemDescription&,
+                                                     const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceConfigHipImplicitGemmFwdXdlops&) const;
+
+>>>>>>> 18ef8fca91bb8bd235947cf00c4385d7383a34f4
     template <typename DataType>
-    bool CheckCKApplicability(const ConvolutionContext& ctx) const;
+    bool CheckCKApplicability(const ProblemDescription&) const;
     template <typename DataType>
     void RunCKSolution(const Handle& handle,
                        const AnyInvokeParams& primitive_parameters,
-                       const ConvolutionContext& ctx,
+                       const ProblemDescription& problem,
                        const PerformanceConfigHipImplicitGemmFwdXdlops& config) const;
 };
 
