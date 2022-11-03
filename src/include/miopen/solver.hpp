@@ -2922,6 +2922,12 @@ struct ConvMPBidirectWinograd_xdlops final
 
         return ConvHipImplicitGemmForwardV4R4Xdlops{}.GetDefaultPerformanceConfig(xdlops_ctx);
     }
+    PerformanceImplicitGemmForwardV4R4Xdlops
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx,
+                                const ProblemDescription& problem) const
+    {
+        const auto xdlops_problem = GetTransformedProblem(problem);
+        const auto xdlops_ctx     = GetTransformedConvContext(ctx, xdlops_problem);
 
     bool
     IsValidPerformanceConfig(const ConvolutionContext& ctx,
