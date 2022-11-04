@@ -5777,6 +5777,120 @@ private:
                        const PerformanceConfigHipImplicitGemmFwdXdlops& config) const;
 };
 
+struct PerformanceConfigHipImplicitGemmWrwXdlops
+    : PerfConfigBase<PerformanceConfigHipImplicitGemmWrwXdlops>
+{
+    int index;
+    std::string kernel_id;
+    int total_size;
+    PerformanceConfigHipImplicitGemmWrwXdlops(int idx, std::string kernl_id)
+        : index(idx), kernel_id(kernl_id), total_size(-1)
+    {
+    }
+    PerformanceConfigHipImplicitGemmWrwXdlops() : PerformanceConfigHipImplicitGemmWrwXdlops(0, "")
+    {
+    }
+    PerformanceConfigHipImplicitGemmWrwXdlops(bool)
+        : PerformanceConfigHipImplicitGemmWrwXdlops(0, "")
+    {
+    }
+    void HeuristicInit(const ProblemDescription&);
+    bool SetNextValue(const ConvolutionContext& ctx) { return SetNextValue(ctx.problem); }
+    bool SetNextValue(const ProblemDescription&);
+    bool IsValidValue() const;
+    bool IsValid(const ConvolutionContext& ctx) const { return IsValid(ctx.problem); }
+    bool IsValid(const ProblemDescription&) const;
+    template <typename Self, typename F>
+    static void Visit(Self&& s, F f)
+    {
+        f(s.kernel_id, "kernel_id");
+    }
+    bool operator==(const PerformanceConfigHipImplicitGemmWrwXdlops& other) const;
+
+private:
+    template <typename DataType>
+    void Init(const ProblemDescription&);
+    template <typename DataType>
+    bool CheckIsSupportCKArgs(const ProblemDescription&) const;
+};
+
+struct ConvHipImplicitGemmWrwXdlops final
+    : ConvTunableSolver<PerformanceConfigHipImplicitGemmWrwXdlops>
+{
+    // To suppress -Woverloaded-virtual
+    using ConvTunableSolver::GetDefaultPerformanceConfig;
+    using ConvTunableSolver::GetSolution;
+    using ConvTunableSolver::IsApplicable;
+    using ConvTunableSolver::IsValidPerformanceConfig;
+    using ConvTunableSolver::Search;
+
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<ConvHipImplicitGemmWrwXdlops>();
+    }
+
+    PerformanceConfigHipImplicitGemmWrwXdlops
+    GetDefaultPerformanceConfig(const ConvolutionContext& ctx) const override
+    {
+        return GetDefaultPerformanceConfig(ctx.problem);
+    }
+    bool
+    IsValidPerformanceConfig(const ConvolutionContext& ctx,
+                             const PerformanceConfigHipImplicitGemmWrwXdlops& config) const override
+    {
+        return IsValidPerformanceConfig(ctx.problem, config);
+    }
+    PerformanceConfigHipImplicitGemmWrwXdlops
+    Search(const ConvolutionContext& ctx, const AnyInvokeParams& invoke_ctx) const override
+    {
+        return Search(ctx, ctx.problem, invoke_ctx);
+    }
+    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override;
+    bool MayNeedWorkspace() const override { return false; }
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx.problem);
+    }
+    bool IsDynamic() const override { return true; }
+    ConvSolution GetSolution(const ConvolutionContext& ctx,
+                             const PerformanceConfigHipImplicitGemmWrwXdlops& config) const override
+    {
+        return GetSolution(ctx, ctx.problem, config);
+    }
+    // Magic Number Alert:
+    // Naive convolutions have GetWti() that return very small value (0.01f).
+    // This allows MIOpen to use Naive Solvers if no other applicable Solvers
+    // have known WTIs. Right now this means that in case of find-db miss,
+    // the library will try to use Winograd or GEMM (whatever is faster according
+    //  to their GetWti's), but if both are not applicable, the library will
+    // use Naive Solver
+    // Since we would like to us CK before naive, and use it instead (because
+    // we do expect that CK is faster than Naive), therefore we use a
+    // value bigger than 0.01f, e.g. 0.02f.
+    float GetWti(const ConvolutionContext&) const override { return 0.02f; };
+
+private:
+    bool IsApplicable(const ProblemDescription&) const;
+    PerformanceConfigHipImplicitGemmWrwXdlops
+    GetDefaultPerformanceConfig(const ProblemDescription&) const;
+    bool IsValidPerformanceConfig(const ProblemDescription&,
+                                  const PerformanceConfigHipImplicitGemmWrwXdlops&) const;
+    PerformanceConfigHipImplicitGemmWrwXdlops Search(const ConvolutionContext&,
+                                                     const ProblemDescription&,
+                                                     const AnyInvokeParams& invoke_ctx) const;
+    ConvSolution GetSolution(const ConvolutionContext&,
+                             const ProblemDescription&,
+                             const PerformanceConfigHipImplicitGemmWrwXdlops&) const;
+
+    template <typename DataType>
+    bool CheckCKApplicability(const ProblemDescription&) const;
+    template <typename DataType>
+    void RunCKSolution(const Handle& handle,
+                       const AnyInvokeParams& primitive_parameters,
+                       const ProblemDescription& problem,
+                       const PerformanceConfigHipImplicitGemmWrwXdlops& config) const;
+};
+
 struct AnySolver;
 
 } // namespace solver

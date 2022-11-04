@@ -23,7 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-/*
+
 #include <vector>
 #include <cstdint>
 
@@ -278,7 +278,6 @@ bool PerformanceConfigHipImplicitGemmWrwXdlops::IsValid(const ProblemDescription
 #else
     switch(problem.conv_problem.GetInDataType())
     {
-    case miopenInt8:
     case miopenHalf: return CheckIsSupportCKArgs<ck::half_t>(problem);
     case miopenFloat: return CheckIsSupportCKArgs<float>(problem);
     case miopenInt8:
@@ -319,9 +318,9 @@ ConvHipImplicitGemmWrwXdlops::Search(const ConvolutionContext& ctx,
     return GenericSearch(*this, ctx, problem, invoke_ctx);
 }
 
-size_t ConvHipImplicitGemmWrwXdlops::GetWorkspaceSize(const ProblemDescription& problem) const
+size_t ConvHipImplicitGemmWrwXdlops::GetWorkspaceSize(const ConvolutionContext& ctx) const
 {
-    std::ignore = problem;
+    std::ignore = ctx;
     return 0;
 }
 
@@ -360,8 +359,11 @@ bool ConvHipImplicitGemmWrwXdlops::IsApplicable(const ProblemDescription& proble
 }
 
 ConvSolution ConvHipImplicitGemmWrwXdlops::GetSolution(
-    const ProblemDescription& problem, const PerformanceConfigHipImplicitGemmWrwXdlops& config) const
+    const ConvolutionContext& ctx,
+    const ProblemDescription& problem,
+    const PerformanceConfigHipImplicitGemmWrwXdlops& config) const
 {
+    std::ignore = ctx;
 #if !MIOPEN_BACKEND_HIP || !MIOPEN_USE_COMPOSABLEKERNEL
     std::ignore = problem;
     std::ignore = config;
@@ -393,4 +395,3 @@ ConvSolution ConvHipImplicitGemmWrwXdlops::GetSolution(
 
 } // namespace solver
 } // namespace miopen
-*/
