@@ -41,7 +41,7 @@ namespace solver {
 
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
 template <typename DataType>
-using DeviceOp = ck::tensor_operation::device::DeviceConvBwdWeight<
+using WrwDeviceOp = ck::tensor_operation::device::DeviceConvBwdWeight<
     2,
     ck::tensor_layout::convolution::NHWC,
     ck::tensor_layout::convolution::KYXC,
@@ -54,12 +54,12 @@ using DeviceOp = ck::tensor_operation::device::DeviceConvBwdWeight<
     ck::tensor_operation::element_wise::PassThrough>;
 
 template <typename DataType>
-using DeviceOpPtrs =
-    ck::tensor_operation::device::instance::DeviceOperationInstanceFactory<DeviceOp<DataType>>;
+using WrwDeviceOpPtrs =
+    ck::tensor_operation::device::instance::DeviceOperationInstanceFactory<WrwDeviceOp<DataType>>;
 
-struct CKArgs
+struct WrwCKArgs
 {
-    CKArgs(const ProblemDescription& problem)
+    WrwCKArgs(const ProblemDescription& problem)
     {
         N        = ProblemInterpreter::GetBatchN(problem);
         K        = ProblemInterpreter::GetOutputChannelK(problem);
@@ -78,7 +78,7 @@ struct CKArgs
                     ProblemInterpreter::GetInputLeftPadW(problem)};
         rPadding = {ProblemInterpreter::GetAdjustedInputRightPadH(problem),
                     ProblemInterpreter::GetAdjustedInputRightPadW(problem)};
-        split_k  = 1;
+        split_k = 1;
     }
     int N;
     int K;
@@ -96,8 +96,9 @@ struct CKArgs
 template <typename DataType>
 void PerformanceConfigHipImplicitGemmWrwXdlops::Init(const ProblemDescription& problem)
 {
-    const auto args      = CKArgs{problem};
-    const auto conv_ptrs = DeviceOpPtrs<DataType>::GetInstances();
+    const auto args      = WrwCKArgs{problem};
+    std::cout<<"********Init********"<<args.split_k<<std::endl;
+    const auto conv_ptrs = WrwDeviceOpPtrs<DataType>::GetInstances();
     assert(!conv_ptrs.empty());
     this->total_size = conv_ptrs.size();
     for(int i = 0; i < conv_ptrs.size(); i++)
@@ -132,8 +133,9 @@ template <typename DataType>
 bool PerformanceConfigHipImplicitGemmWrwXdlops::CheckIsSupportCKArgs(
     const ProblemDescription& problem) const
 {
-    const auto args      = CKArgs{problem};
-    const auto conv_ptrs = DeviceOpPtrs<DataType>::GetInstances();
+    const auto args      = WrwCKArgs{problem};
+        std::cout<<"*************check is support ck args*************"<<args.split_k<<std::endl;
+    const auto conv_ptrs = WrwDeviceOpPtrs<DataType>::GetInstances();
     auto argument_ptr    = conv_ptrs[this->index]->MakeArgumentPointer(nullptr,
                                                                     nullptr,
                                                                     nullptr,
@@ -157,9 +159,10 @@ bool PerformanceConfigHipImplicitGemmWrwXdlops::CheckIsSupportCKArgs(
 template <typename DataType>
 bool ConvHipImplicitGemmWrwXdlops::CheckCKApplicability(const ProblemDescription& problem) const
 {
-    const auto conv_ptrs = DeviceOpPtrs<DataType>::GetInstances();
+    const auto conv_ptrs = WrwDeviceOpPtrs<DataType>::GetInstances();
     assert(!conv_ptrs.empty());
-    const auto args = CKArgs{problem};
+    const auto args = WrwCKArgs{problem};
+    std::cout<<"*************check ck applicability*************"<<args.split_k<<std::endl;
     if(!std::all_of(args.strides.begin(), args.strides.end(), [&](auto x) { return x == 1; }))
         return false;
     for(int i = 0; i < conv_ptrs.size(); i++)
@@ -194,8 +197,9 @@ void ConvHipImplicitGemmWrwXdlops::RunCKSolution(
     const ProblemDescription& problem,
     const PerformanceConfigHipImplicitGemmWrwXdlops& config) const
 {
-    const auto args      = CKArgs{problem};
-    const auto conv_ptrs = DeviceOpPtrs<DataType>::GetInstances();
+    const auto args      = WrwCKArgs{problem};
+    std::cout<<"*************run ck solution*************"<<args.split_k<<std::endl;
+    const auto conv_ptrs = WrwDeviceOpPtrs<DataType>::GetInstances();
     auto& conv_ptr       = conv_ptrs.at(config.index);
     const auto& data_ctx = primitive_parameters.CastTo<conv::WrWInvokeParams>();
     const auto& tensors  = data_ctx.tensors;
