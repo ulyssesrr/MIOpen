@@ -174,6 +174,26 @@ std::string LoadBinary(const TargetProperties& target,
     }
     else
     {
+        // Lets see if a more generic code object exists
+        // Get the GPU arch and strip TargetID components
+        // Check DB
+        auto opts        = miopen::SplitSpaceSeparated(args);
+        std::string arch = "";
+        for(const auto& kinder : opts)
+        {
+            if(miopen::StartsWith(kinder, "-mcpu="))
+            {
+                const auto tgt = miopen::SplitDelim(kinder, ':');
+                if(tgt.empty())
+                    return {}; // The default code object is being searched for already
+                arch = tgt[0];
+            }
+        }
+        opts.erase(std::remove_if(opts.begin(),
+                                  opts.end(),
+                                  [&](auto& opt) { return miopen::StartsWith(opt, "-mcpu="); }),
+                   opts.end());
+        auto new_params = miopen::JoinStrings(opts, " ") + arch;
         MIOPEN_LOG_I2("Unable to load binary for: " << verbose_name << "; args: " << args);
         return {};
     }
