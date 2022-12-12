@@ -184,7 +184,7 @@ std::string LoadBinary(const TargetProperties& target,
             if(miopen::StartsWith(kinder, "-mcpu="))
             {
                 const auto tgt = miopen::SplitDelim(kinder, ':');
-                if(tgt.empty())
+                if(tgt.size() <= 1)
                     return {}; // The default code object is being searched for already
                 arch = tgt[0];
             }
