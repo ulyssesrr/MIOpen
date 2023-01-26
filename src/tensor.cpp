@@ -36,6 +36,12 @@
 #include <numeric>
 #include <string>
 
+#define CHECK_INITIALIZED()\
+{\
+    if(!initialized)\
+        MIOPEN_THROW(miopenStatusNotInitialized, "Tensor descriptor not initialized");\
+}
+
 namespace miopen {
 
 namespace {
@@ -205,12 +211,14 @@ TensorDescriptor::TensorDescriptor(miopenDataType_t t,
             MIOPEN_THROW(miopenStatusBadParm, "Strides must be > 0");
 
         strides = strides_in;
+        initialized = true;
         packed  = (this->GetElementSize() == this->GetElementSpace());
     }
     else
     {
         packed = true;
         this->CalculateStrides();
+        initialized = true;
     }
 }
 
@@ -272,30 +280,53 @@ void TensorDescriptor::CalculateVectorLength()
                                                                                            : 1));
 }
 
-bool TensorDescriptor::IsVectorized() const { return vector_length > 1; }
+bool TensorDescriptor::IsVectorized() const
+{
+    CHECK_INITIALIZED();
+    return vector_length > 1;
+}
 
-const std::vector<std::size_t>& TensorDescriptor::GetLengths() const { return lens; }
+const std::vector<std::size_t>& TensorDescriptor::GetLengths() const
+{
+    CHECK_INITIALIZED();
+    return lens;
+}
 
-const std::vector<std::size_t>& TensorDescriptor::GetStrides() const { return strides; }
+const std::vector<std::size_t>& TensorDescriptor::GetStrides() const
+{
+    CHECK_INITIALIZED();
+    return strides;
+}
 
 int TensorDescriptor::GetSize() const
 {
+    CHECK_INITIALIZED();
     assert(lens.size() == strides.size());
     return lens.size();
 }
 
 std::size_t TensorDescriptor::GetElementSize() const
 {
+    CHECK_INITIALIZED();
     assert(lens.size() == strides.size());
     return std::accumulate(lens.begin(), lens.end(), vector_length, std::multiplies<std::size_t>());
 }
 
-miopenDataType_t TensorDescriptor::GetType() const { return this->type; }
+miopenDataType_t TensorDescriptor::GetType() const
+{
+    CHECK_INITIALIZED();
+    return this->type;
+}
 
-miopenTensorLayout_t TensorDescriptor::GetLayout_t() const { return this->tensorLayout; }
+miopenTensorLayout_t TensorDescriptor::GetLayout_t() const
+{
+    CHECK_INITIALIZED();
+    return this->tensorLayout;
+}
 
 std::string TensorDescriptor::GetLayout_str() const
 {
+    CHECK_INITIALIZED();
     switch(this->tensorLayout)
     {
     case miopenTensorNCHW: return "NCHW";
@@ -311,10 +342,15 @@ std::string TensorDescriptor::GetLayout_str() const
     MIOPEN_THROW(miopenStatusInternalError, "Unknown tensor layout");
 }
 
-std::size_t TensorDescriptor::GetVectorLength() const { return this->vector_length; }
+std::size_t TensorDescriptor::GetVectorLength() const
+{
+    CHECK_INITIALIZED();
+    return this->vector_length;
+}
 
 std::size_t TensorDescriptor::GetIndex(std::initializer_list<int> l) const
 {
+    CHECK_INITIALIZED();
     // l is in NCHW order (MIOpen implicit logic)
     if(this->GetLayout_str() == "CHWNc")
     {
@@ -344,6 +380,7 @@ std::size_t TensorDescriptor::GetIndex(std::initializer_list<int> l) const
 
 std::size_t TensorDescriptor::GetElementSpace() const
 {
+    CHECK_INITIALIZED();
     std::vector<std::size_t> maxIndices(lens.size());
     std::transform(lens.begin(),
                    lens.end(),
@@ -357,6 +394,7 @@ std::size_t TensorDescriptor::GetElementSpace() const
 
 bool TensorDescriptor::IsPossibleLayout(const std::string& labels, const std::string& layout) const
 {
+    CHECK_INITIALIZED();
     std::vector<size_t> derived_strides;
     tensor_layout_to_strides(lens, labels, layout, derived_strides);
     return derived_strides == strides;
@@ -364,34 +402,47 @@ bool TensorDescriptor::IsPossibleLayout(const std::string& labels, const std::st
 
 std::size_t TensorDescriptor::GetNumBytes() const
 {
+    CHECK_INITIALIZED();
     std::size_t typesize = GetTypeSize(this->type);
     return typesize * this->GetElementSpace();
 }
 
-bool TensorDescriptor::IsPacked() const { return this->packed; }
+bool TensorDescriptor::IsPacked() const
+{
+    CHECK_INITIALIZED();
+    return this->packed;
+}
 
 bool TensorDescriptor::operator==(const TensorDescriptor& rhs) const
 {
+    CHECK_INITIALIZED();
     assert(this->lens.size() == rhs.strides.size());
     return this->type == rhs.type && this->lens == rhs.lens && this->strides == rhs.strides;
 }
 
-bool TensorDescriptor::operator!=(const TensorDescriptor& rhs) const { return !(*this == rhs); }
+bool TensorDescriptor::operator!=(const TensorDescriptor& rhs) const
+{
+    CHECK_INITIALIZED();
+    return !(*this == rhs);
+}
 
 bool TensorDescriptor::operator<(const TensorDescriptor& rhs) const
 {
+    CHECK_INITIALIZED();
     return (std::tie(this->GetLengths(), this->GetStrides()) <
             std::tie(rhs.GetLengths(), rhs.GetStrides()));
 }
 
 bool TensorDescriptor::operator>(const TensorDescriptor& rhs) const
 {
+    CHECK_INITIALIZED();
     return (std::tie(this->GetLengths(), this->GetStrides()) >
             std::tie(rhs.GetLengths(), rhs.GetStrides()));
 }
 
 std::string TensorDescriptor::ToString() const
 {
+    CHECK_INITIALIZED();
     std::string result;
     if(this->lens.empty())
         return result;

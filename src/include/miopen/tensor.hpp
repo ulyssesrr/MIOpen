@@ -224,6 +224,9 @@ struct TensorDescriptor : miopenTensorDescriptor
 
     std::string GetLayout(std::string labels) const
     {
+        if(!initialized)
+            MIOPEN_THROW(miopenStatusNotInitialized, "Tensor descriptor not initialized");
+
         if(*(labels.end() - 1) != 'c')
         {
             if(labels.size() != strides.size())
@@ -279,6 +282,8 @@ private:
 
     miopenDataType_t type             = miopenFloat;
     miopenTensorLayout_t tensorLayout = GetDefaultLayout();
+
+    bool initialized;
 };
 
 template <class TElement>
