@@ -36,11 +36,11 @@
 #include <numeric>
 #include <string>
 
-#define CHECK_INITIALIZED()\
-{\
-    if(!initialized)\
-        MIOPEN_THROW(miopenStatusNotInitialized, "Tensor descriptor not initialized");\
-}
+#define CHECK_INITIALIZED()                                                                \
+    {                                                                                      \
+        if(!initialized)                                                                   \
+            MIOPEN_THROW(miopenStatusNotInitialized, "Tensor descriptor not initialized"); \
+    }
 
 namespace miopen {
 
@@ -210,9 +210,9 @@ TensorDescriptor::TensorDescriptor(miopenDataType_t t,
         if(!CheckLengths(strides_in))
             MIOPEN_THROW(miopenStatusBadParm, "Strides must be > 0");
 
-        strides = strides_in;
+        strides     = strides_in;
         initialized = true;
-        packed  = (this->GetElementSize() == this->GetElementSpace());
+        packed      = (this->GetElementSize() == this->GetElementSpace());
     }
     else
     {
