@@ -117,7 +117,7 @@ void PerformanceConfigHipImplicitGemmFwdXdlops::Init(const ProblemDescription& p
                                                               {});
         if(conv_ptrs[i]->IsSupportedArgument(argument_ptr.get()))
         {
-            valid_kernels.push_back(conv_ptrs[i]->GetTypeString());           
+            valid_kernels.push_back(conv_ptrs[i]->GetTypeIdName());           
         }
     }
     assert(!valid_kernels.empty());
@@ -134,7 +134,7 @@ bool PerformanceConfigHipImplicitGemmFwdXdlops::CheckIsSupportCKArgs(
     int i                = 0;
     for(; i < conv_ptrs.size(); i++)
     {
-        if(conv_ptrs[i]->GetTypeString() == this->kernel_id)
+        if(conv_ptrs[i]->GetTypeIdName() == this->kernel_id)
         {
             break;
         }
@@ -207,7 +207,7 @@ void RunCKSolution(const Handle& handle,
     int i                = 0;
     for(; i < conv_ptrs.size(); i++)
     {
-        if(conv_ptrs[i]->GetTypeString() == config.kernel_id)
+        if(conv_ptrs[i]->GetTypeIdName() == config.kernel_id)
         {
             break;
         }
