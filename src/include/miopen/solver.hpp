@@ -5607,9 +5607,9 @@ struct PerformanceConfigHipImplicitGemmFwdXdlops
 {
     int index;
     std::string kernel_id;
-    int total_size;
+    std::vector<std::string> valid_kernels;
     PerformanceConfigHipImplicitGemmFwdXdlops(int idx, std::string kernl_id)
-        : index(idx), kernel_id(kernl_id), total_size(-1)
+        : index(idx), kernel_id(kernl_id)
     {
     }
     PerformanceConfigHipImplicitGemmFwdXdlops() : PerformanceConfigHipImplicitGemmFwdXdlops(0, "")
@@ -5670,8 +5670,6 @@ struct ConvHipImplicitGemmFwdXdlops final
     {
         return Search(ctx, ctx.problem, invoke_ctx);
     }
-    size_t GetWorkspaceSize(const ConvolutionContext& ctx) const override;
-    bool MayNeedWorkspace() const override { return false; }
     bool IsApplicable(const ConvolutionContext& ctx) const override
     {
         return IsApplicable(ctx, ctx.problem);
