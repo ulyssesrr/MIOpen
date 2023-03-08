@@ -184,6 +184,7 @@ set( MIOpen_Source
     solver/conv_hip_implicit_gemm_bwd_v1r1_xdlops.cpp
     solver/conv_hip_implicit_gemm_bwd_v4r1.cpp
     solver/conv_hip_implicit_gemm_bwd_v4r1_xdlops.cpp
+    solver/conv_hip_implicit_gemm_fwd_layer_quant_xdlops.cpp
     solver/conv_hip_implicit_gemm_fwd_v4r1.cpp
     solver/conv_hip_implicit_gemm_fwd_v4r4.cpp
     solver/conv_hip_implicit_gemm_fwd_v4r4_xdlops.cpp
