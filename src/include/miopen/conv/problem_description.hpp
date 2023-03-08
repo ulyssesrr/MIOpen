@@ -341,7 +341,7 @@ struct ProblemDescription : ProblemDescriptionBase
     bool IsInt8() const
     {
         return GetInDataType() == miopenInt8 && GetWeightsDataType() == miopenInt8 &&
-               (GetOutDataType() == miopenInt32 || GetOutDataType() == miopenFloat);
+               (GetOutDataType() == miopenInt32 || GetOutDataType() == miopenFloat || GetOutDataType() == miopenInt8);
     }
 
     // To be used in Solvers that do not implement ALT FP16 kernels.
