@@ -122,9 +122,9 @@ struct ConvTestCase
 };
 
 std::vector<ConvTestCase> ConvTestConfigs()
-{ // n  c   h   w   k   y  x pad_x pad_y stri_x stri_y dia_x dia_y
+{ // g  n  c   h   w   k   y  x pad_x pad_y stri_x stri_y dia_x dia_y
     return {{1, 256, 128, 28, 28, 128, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
-            {1, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1, miopenConvolution},
+            {1, 1, 1, 4, 4, 1, 1, 1, 0, 0, 1, 1, 1, 1, miopenConvolution},
             {1, 256, 192, 28, 28, 192, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution}};
     /*return {{16, 128, 16, 16, 128, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
             {64, 128, 28, 28, 128, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
@@ -202,6 +202,11 @@ protected:
         //ref_out = tensor<T>{output_desc.GetLengths()};
         ref_out = tensor<T>{miopen_type<T>{}, tensor_layout, output_desc.GetLengths()};
         ref_out = ref_conv_fwd(input, weights, output, conv_desc);
+        std::cout<<"ref_out.data.size(): "<<ref_out.data.size()<<std::endl;
+        for(const auto& x:ref_out.data){
+            std::cout<<"x= "<<(float)x<<",";
+        }
+        std::cout<<std::endl;
         /*       
         cpu_convolution_forward(conv_desc.GetSpatialDimension(),
                                 input,
