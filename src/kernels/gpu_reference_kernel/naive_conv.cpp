@@ -112,6 +112,44 @@ inline __device__ __host__ int8_t cast_to(const int32_t& val)
     return static_cast<int8_t>(val & 0xff);
 }
 
+template <typename T>
+__host__ __device__ constexpr T clamp(const T& x, const T& lowerbound, const T& upperbound)
+{
+    return min(max(x, lowerbound), upperbound);
+}
+
+struct PassThrough
+{
+    template <typename Y, typename X>
+    __host__ __device__ void operator()(Y& y, const X& x) const
+    {
+        y = x;
+    }
+};
+
+template <typename Activation>
+struct Activation_Mul_Clamp
+{
+    __host__ __device__ Activation_Mul_Clamp(float requantScale, Activation activationOp)
+        : requantScale_(requantScale), activationOp_(activationOp)
+    {
+    }
+
+    template<typename Y, typename X>
+    __host__ __device__ void operator()(Y& y, const &X x) const
+    {
+        float x_fp32 = static_cast<float>(x);
+        activationOp_(x_fp32, x_fp32);
+        float y_fp32 = clamp(requantScale_ * x_fp32, -128.f, 127.f);
+        y      = static_cast<Y>(y_fp32);
+    }
+
+    float requantScale_;
+    Activation activationOp_;
+};
+
+
+
 template <typename src_data_t, typename acc_data_t, typename dst_data_t>
 inline __device__ void naive_conv_fwd_nchw(const src_data_t* __restrict__ p_in,
                                            const src_data_t* __restrict__ p_wei,
@@ -187,7 +225,7 @@ inline __device__ void naive_conv_fwd_nchw(const src_data_t* __restrict__ p_in,
             }
         }
         size_t o_idx = static_cast<size_t>(iho) * wo + static_cast<size_t>(iwo);
-        p_out[o_idx] = cast_to<acc_data_t, dst_data_t>(value);
+        p_out[o_idx] = cast_to<double, dst_data_t>(value);
     }
 }
 
@@ -674,7 +712,7 @@ inline __device__ void naive_conv_wrw_ncdhw(const src_data_t* __restrict__ p_in,
 
 /***************************** nhwc *****************************/
 // design block_size 256
-template <typename src_data_t, typename acc_data_t, typename dst_data_t>
+template <typename src_data_t, typename acc_data_t, typename dst_data_t, typename ElementwiseOp = PassThrough>
 inline __device__ void naive_conv_fwd_nhwc(const src_data_t* __restrict__ p_in,
                                            const src_data_t* __restrict__ p_wei,
                                            dst_data_t* __restrict__ p_out,
@@ -693,7 +731,8 @@ inline __device__ void naive_conv_fwd_nhwc(const src_data_t* __restrict__ p_in,
                                            int px,
                                            int fy,
                                            int fx,
-                                           int group)
+                                           int group,
+                                           ElementwiseOp elementwise_op = PassThrough{})
 {
     /*
      *  need to compute total output pixel: `group * n * ho * wo * k_per_group`.
@@ -750,8 +789,13 @@ inline __device__ void naive_conv_fwd_nhwc(const src_data_t* __restrict__ p_in,
                 }
             }
         }
+
+        double quanted_value = 0.0f;
+        auto elementwise_op_ = Activation_Mul_Clamp<PassThrough>{1.0f, PassThrough{}};
+        elementwise_op_(quanted_value, value);
+
         size_t o_idx = static_cast<size_t>(iwo) * k + static_cast<size_t>(ik);
-        p_out[o_idx] = cast_to<acc_data_t, dst_data_t>(value);
+        p_out[o_idx] = cast_to<double, dst_data_t>(quanted_value);
     }
 }
 
