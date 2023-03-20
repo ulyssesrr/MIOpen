@@ -44,6 +44,10 @@ typedef float float_t;
 #endif
 #endif // __HIPCC_RTC__
 
+//#include "/home/dfeng/dfeng/miopen/develop_with_branches/MIOpen/src/kernels/gpu_reference_kernel/quant_ops.hpp"
+//#include "src/include/miopen/quantization_op.hpp"
+//#include<bfloat16.hpp>
+
 // hcc seems need __device__ __host__ together to compile, and no extern "C"
 typedef union value_bf16_fp32_t
 {
@@ -136,7 +140,7 @@ struct Activation_Mul_Clamp
     }
 
     template<typename Y, typename X>
-    __host__ __device__ void operator()(Y& y, const &X x) const
+    __host__ __device__ void operator()(Y& y, const X& x) const
     {
         float x_fp32 = static_cast<float>(x);
         activationOp_(x_fp32, x_fp32);
@@ -147,8 +151,6 @@ struct Activation_Mul_Clamp
     float requantScale_;
     Activation activationOp_;
 };
-
-
 
 template <typename src_data_t, typename acc_data_t, typename dst_data_t>
 inline __device__ void naive_conv_fwd_nchw(const src_data_t* __restrict__ p_in,
@@ -732,7 +734,7 @@ inline __device__ void naive_conv_fwd_nhwc(const src_data_t* __restrict__ p_in,
                                            int fy,
                                            int fx,
                                            int group,
-                                           ElementwiseOp elementwise_op = PassThrough{})
+                                           float quantScale=1.0f)
 {
     /*
      *  need to compute total output pixel: `group * n * ho * wo * k_per_group`.
@@ -791,7 +793,7 @@ inline __device__ void naive_conv_fwd_nhwc(const src_data_t* __restrict__ p_in,
         }
 
         double quanted_value = 0.0f;
-        auto elementwise_op_ = Activation_Mul_Clamp<PassThrough>{1.0f, PassThrough{}};
+        auto elementwise_op_ = Activation_Mul_Clamp<PassThrough>{quantScale, PassThrough{}};
         elementwise_op_(quanted_value, value);
 
         size_t o_idx = static_cast<size_t>(iwo) * k + static_cast<size_t>(ik);
@@ -1296,7 +1298,8 @@ inline __device__ void naive_conv_wrw_ndhwc(const src_data_t* __restrict__ p_in,
             int px,                                                                        \
             int fy,                                                                        \
             int fx,                                                                        \
-            int group)                                                                     \
+            int group,                                                                     \
+            float quantScale)                                                              \
     {                                                                                      \
         naive_conv_fwd_##tensor_layout<src_data_t, acc_data_t, dst_data_t>(p_in,           \
                                                                            p_wei,          \
@@ -1316,7 +1319,8 @@ inline __device__ void naive_conv_wrw_ndhwc(const src_data_t* __restrict__ p_in,
                                                                            px,             \
                                                                            fy,             \
                                                                            fx,             \
-                                                                           group);         \
+                                                                           group,          \
+                                                                           quantScale);    \
     }
 
 #define DEFINE_2D_NAIVE_BWD_CONV_KERNEL(tensor_layout, src_data_t, acc_data_t, dst_data_t) \
@@ -1574,7 +1578,7 @@ inline __device__ void naive_conv_wrw_ndhwc(const src_data_t* __restrict__ p_in,
                                                                            fx,             \
                                                                            group);         \
     }
-
+/*
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nchw, float, double, float)
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nchw, half, double, half)
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nchw, ushort, double, ushort)
@@ -1584,7 +1588,9 @@ DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, float, double, float)
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, half, double, half)
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, ushort, double, ushort)
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, int32_t)
-DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, float)
+DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, float)*/
+
+DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, int8_t)
 
 DEFINE_2D_NAIVE_BWD_CONV_KERNEL(nchw, float, double, float)
 DEFINE_2D_NAIVE_BWD_CONV_KERNEL(nchw, half, double, half)

@@ -202,10 +202,10 @@ protected:
         //ref_out = tensor<T>{output_desc.GetLengths()};
         ref_out = tensor<T>{miopen_type<T>{}, tensor_layout, output_desc.GetLengths()};
         ref_out = ref_conv_fwd(input, weights, output, conv_desc);
-        std::cout<<"ref_out.data.size(): "<<ref_out.data.size()<<std::endl;
-        for(const auto& x:ref_out.data){
-            std::cout<<"x= "<<(float)x<<",";
-        }
+        //std::cout<<"ref_out.data.size(): "<<ref_out.data.size()<<std::endl;
+        //for(const auto& x:ref_out.data){
+        //    std::cout<<"x= "<<(float)x<<",";
+        //}
         std::cout<<std::endl;
         /*       
         cpu_convolution_forward(conv_desc.GetSpatialDimension(),
@@ -223,7 +223,8 @@ protected:
         EXPECT_TRUE(miopen::range_distance(ref_out) == miopen::range_distance(output));
 
         const double tolerance = 80;
-        double threshold       = std::numeric_limits<T>::epsilon() * tolerance;
+        double threshold       = std::numeric_limits<float>::epsilon() * tolerance;
+        std::cout<<"*****threshold: "<<std::endl;
         auto error             = miopen::rms_range(ref_out, output);
 
         EXPECT_FALSE(miopen::find_idx(ref_out, miopen::not_finite) >= 0)

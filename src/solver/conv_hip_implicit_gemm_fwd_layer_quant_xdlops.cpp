@@ -44,6 +44,8 @@ namespace solver {
 using ActivationOp = ck::tensor_operation::element_wise::PassThrough;
 using OElementOp = ck::tensor_operation::element_wise::Activation_Mul_Clamp<ActivationOp>;
 
+static float quantScale = 0.5f;
+
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
 template <typename DataType>
 using DeviceOpGFwdQuant = ck::tensor_operation::device::DeviceGroupedConvFwdMultipleD<
@@ -279,7 +281,7 @@ void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::Init(const Problem
                                                               args.rPadding,
                                                               {},
                                                               {},
-                                                              OElementOp{1.0f, ActivationOp{}});
+                                                              OElementOp{quantScale, ActivationOp{}});
         if(conv_ptrs[i]->IsSupportedArgument(argument_ptr.get()))
         {
             valid_kernels.push_back(conv_ptrs[i]->GetTypeIdName());
@@ -327,7 +329,7 @@ bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::CheckIsSupportCKAr
                                                           args.rPadding,
                                                           {},
                                                           {},
-                                                          OElementOp{1.0f, ActivationOp{}});
+                                                          OElementOp{quantScale, ActivationOp{}});
     return conv_ptrs[i]->IsSupportedArgument(argument_ptr.get());
 }
 
@@ -375,7 +377,7 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::CheckCKApplicability(const Prob
                                                           args.rPadding,
                                                           {},
                                                           {},
-                                                          OElementOp{1.0f, ActivationOp{}});
+                                                          OElementOp{quantScale, ActivationOp{}});
         if(conv_ptrs[i]->IsSupportedArgument(argument_ptr.get()))
             return true;
     }
@@ -425,7 +427,7 @@ void ConvHipImplicitGemmConvFwdLayerQuantXdlops::RunCKSolution(
         args.rPadding,
         ck::tensor_operation::element_wise::PassThrough{},
         ck::tensor_operation::element_wise::PassThrough{},
-        OElementOp{1.0f, ActivationOp{}}); // hard coded value. Need to change
+        OElementOp{quantScale, ActivationOp{}}); // hard coded value. Need to change
     auto invoker_ptr            = conv_ptr->MakeInvokerPointer();
     const auto enable_profiling = handle.IsProfilingEnabled();
 

@@ -86,6 +86,8 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
     int c_per_group = c / group;
     int k_per_group = k / group;
 
+    float quantScale = 0.5f;
+
     size_t block_size = 256;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
@@ -144,7 +146,8 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
                                  px,
                                  fy,
                                  fx,
-                                 group);
+                                 group,
+                                 quantScale);
                 if(handle.IsProfilingEnabled())
                     elapsed += handle.GetKernelTime();
 
