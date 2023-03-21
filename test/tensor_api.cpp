@@ -68,5 +68,27 @@ int main(int argc, char* argv[])
     CHECK(t_cStride == cStride);
     CHECK(t_hStride == hStride);
     CHECK(t_wStride == wStride);
+    miopen::TensorDescriptor nhwc_desc;
+    std::vector<int> lens = {32, 16, 24, 24};
+    res                   = miopenSetNdTensorDescriptorWithLayout(
+        &nhwc_desc, miopenFloat, miopenTensorNHWC, lens.data(), lens.size());
+    res = miopenGet4dTensorDescriptor(&nhwc_desc,
+                                      &t_type,
+                                      &t_n,
+                                      &t_c,
+                                      &t_h,
+                                      &t_w,
+                                      &t_nStride,
+                                      &t_cStride,
+                                      &t_hStride,
+                                      &t_wStride);
+    CHECK(res == miopenStatusSuccess);
+    CHECK(nhwc_desc.GetType() == miopenFloat);
+    CHECK(nhwc_desc.GetLayout_t() == miopenTensorNHWC);
+    CHECK(nhwc_desc.GetStrides()[0] == 9216);
+    CHECK(nhwc_desc.GetStrides()[1] == 1);
+    CHECK(nhwc_desc.GetStrides()[2] == 384);
+    CHECK(nhwc_desc.GetStrides()[3] == 16);
+
     return 0;
 }

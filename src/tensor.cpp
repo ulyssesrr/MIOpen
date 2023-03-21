@@ -246,21 +246,35 @@ void TensorDescriptor::CalculateStrides()
     if(lens.empty())
         MIOPEN_THROW(miopenStatusInternalError, "lens must be non-empty");
     strides.clear();
-    strides.resize(lens.size(), 0);
-    if(tensorLayout == miopenTensorNCHWc4 || tensorLayout == miopenTensorNCHWc8)
+    if(vector_length > 1)
     {
-        lens[1] /= vector_length;
-    }
-    else if(tensorLayout == miopenTensorCHWNc4 || tensorLayout == miopenTensorCHWNc8)
-    {
-        lens[0] /= vector_length;
-    }
+        strides.resize(lens.size(), 0);
+        if(tensorLayout == miopenTensorNCHWc4 || tensorLayout == miopenTensorNCHWc8)
+        {
+            lens[1] /= vector_length;
+        }
+        else if(tensorLayout == miopenTensorCHWNc4 || tensorLayout == miopenTensorCHWNc8)
+        {
+            lens[0] /= vector_length;
+        }
+        else
+        {
+            MIOPEN_THROW("Unsupport vectorized layout" + GetLayout_str());
+        }
 
-    strides.back() = vector_length;
-    std::partial_sum(
-        lens.rbegin(), lens.rend() - 1, strides.rbegin() + 1, std::multiplies<std::size_t>());
-    for(int i = 0; i < strides.size() - 1; i++)
-        strides[i] *= vector_length;
+        strides.back() = vector_length;
+        std::partial_sum(
+            lens.rbegin(), lens.rend() - 1, strides.rbegin() + 1, std::multiplies<std::size_t>());
+        for(int i = 0; i < strides.size() - 1; i++)
+            strides[i] *= vector_length;
+    }
+    else
+    {
+        const auto default_layout = tensor_layout_get_default(lens.size());
+        MIOPEN_LOG_W("tensor is " << *this);
+        tensor_layout_to_strides(
+            lens, tensor_layout_get_default(lens.size()), this->GetLayout_str(), strides);
+    }
 }
 
 void TensorDescriptor::CalculateVectorLength()

@@ -51,6 +51,7 @@ void tensor_layout_to_strides(const std::vector<T>& len,
 
     // Now construct the strides according to layout by multiply the
     // dimension lengths together.
+    std::cout << "tensor_layout_to_strides: " << len_layout << ":" << layout << std::endl;
     std::transform(len_layout.begin(),
                    len_layout.end(),
                    std::back_inserter(strides),
