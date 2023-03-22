@@ -100,7 +100,7 @@ bool IsOutputInt32(const ProblemDescription& problem)
            problem.out_data_type == miopenInt32;
 }
 
-std::string ConvDirectNaiveConvKernelName(const ProblemDescription& problem)
+std::string ConvDirectNaiveConvKernelName(const ProblemDescription& problem, bool is_quant)
 {
     std::ostringstream kernel_name;
     kernel_name << "naive_conv_";
@@ -112,6 +112,9 @@ std::string ConvDirectNaiveConvKernelName(const ProblemDescription& problem)
         kernel_name << "wrw_";
     else
         MIOPEN_THROW("unsupported convolution direction");
+        
+    if(is_quant)
+        kernel_name << "quant_";
 
     if(problem.IsLayoutDefault())
     {

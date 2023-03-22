@@ -33,7 +33,7 @@ namespace miopen {
 namespace solver {
 
 bool ConvDirectNaiveConvIsAssemblyKernel(const ExecutionContext&, const ProblemDescription&);
-std::string ConvDirectNaiveConvKernelName(const ProblemDescription&);
+std::string ConvDirectNaiveConvKernelName(const ProblemDescription&, bool is_quant = false);
 std::string ConvDirectNaiveConvKernelFile();
 std::string ConvDirectNaiveConvCompileOption(const ConvolutionContext& ctx);
 bool ConvDirectNaiveConvIsApplicableByKernelType(const ExecutionContext&,

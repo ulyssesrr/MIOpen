@@ -29,16 +29,16 @@
 #include <miopen/conv/data_invoke_params.hpp>
 #include <miopen/env.hpp>
 
-MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_CONV_DIRECT_NAIVE_CONV_FWD)
+MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_CONV_DIRECT_NAIVE_CONV_QUANT)
 
 namespace miopen {
 namespace solver {
 
-bool ConvDirectNaiveConvFwd::IsApplicable(const ConvolutionContext& ctx,
+bool ConvDirectNaiveConvQuant::IsApplicable(const ConvolutionContext& ctx,
                                           const ProblemDescription& problem) const
 {
     if(!miopen::debug::AlwaysEnableConvDirectNaive &&
-       miopen::IsDisabled(MIOPEN_DEBUG_CONV_DIRECT_NAIVE_CONV_FWD{}))
+       miopen::IsDisabled(MIOPEN_DEBUG_CONV_DIRECT_NAIVE_CONV_QUANT{}))
         return false;
 
     if(!ConvDirectNaiveConvIsApplicableByKernelType(ctx, problem))
@@ -56,7 +56,7 @@ bool ConvDirectNaiveConvFwd::IsApplicable(const ConvolutionContext& ctx,
     return true;
 }
 
-ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
+ConvSolution ConvDirectNaiveConvQuant::GetSolution(const ConvolutionContext& ctx,
                                                  const ProblemDescription& problem) const
 {
     ConvSolution result;
@@ -86,6 +86,8 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
     int c_per_group = c / group;
     int k_per_group = k / group;
 
+    float quantScale = 0.5f; // hard code for testing. Should be passed from APIs when finalized
+
     size_t block_size = 256;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
@@ -105,7 +107,7 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
     KernelInfo kernel;
 
     kernel.kernel_file = ConvDirectNaiveConvKernelFile();
-    kernel.kernel_name = ConvDirectNaiveConvKernelName(problem);
+    kernel.kernel_name = ConvDirectNaiveConvKernelName(problem, true);
     kernel.g_wk.clear();
 
     kernel.g_wk.push_back(grid_size * block_size);
@@ -144,7 +146,8 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
                                  px,
                                  fy,
                                  fx,
-                                 group);
+                                 group,
+                                 quantScale);
                 if(handle.IsProfilingEnabled())
                     elapsed += handle.GetKernelTime();
 

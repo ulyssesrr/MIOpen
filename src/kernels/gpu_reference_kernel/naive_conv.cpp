@@ -801,6 +801,95 @@ inline __device__ void naive_conv_fwd_nhwc(const src_data_t* __restrict__ p_in,
     }
 }
 
+/***************************** quantization nhwc *****************************/
+// design block_size 256
+template <typename src_data_t, typename acc_data_t, typename dst_data_t, typename ElementwiseOp = PassThrough>
+inline __device__ void naive_conv_fwd_quant_nhwc(const src_data_t* __restrict__ p_in,
+                                           const src_data_t* __restrict__ p_wei,
+                                           dst_data_t* __restrict__ p_out,
+                                           int hi,
+                                           int wi,
+                                           int n,
+                                           int k_per_group,
+                                           int c_per_group,
+                                           int ho,
+                                           int wo,
+                                           int sy,
+                                           int sx,
+                                           int dy,
+                                           int dx,
+                                           int py,
+                                           int px,
+                                           int fy,
+                                           int fx,
+                                           int group,
+                                           float quantScale=1.0f)
+{
+    /*
+     *  need to compute total output pixel: `group * n * ho * wo * k_per_group`.
+     *  to distribute this workload, let one workgroup compute `wo *
+     * k_per_group` pixel,
+     *  hence need `group * n * ho` workgroups (grid_size).
+     */
+    int k             = k_per_group * group;
+    int c             = c_per_group * group;
+    int thread_length = wo * k_per_group;
+    int bid           = blockIdx.x;
+    int iho           = bid % ho;
+    int in            = (bid / ho) % n;
+    int ig            = bid / (n * ho);
+
+    p_in += static_cast<size_t>(in) * hi * wi * c + static_cast<size_t>(ig) * c_per_group;
+    p_wei += static_cast<size_t>(ig) * k_per_group * fy * fx * c_per_group;
+    p_out += static_cast<size_t>(in) * ho * wo * k + static_cast<size_t>(ig) * k_per_group +
+             static_cast<size_t>(iho) * wo * k;
+
+    for(int tid = threadIdx.x; tid < thread_length; tid += 256)
+    {
+        int iwo = tid / k_per_group;
+        int ik  = tid % k_per_group;
+
+        double value = .0f;
+
+        for(int iy = 0; iy < fy; iy++)
+        {
+            int valid_h = 1;
+            int cur_h   = sy * iho - py + dy * iy;
+            if(cur_h < 0 || cur_h >= hi)
+                valid_h &= 0;
+            for(int ix = 0; ix < fx; ix++)
+            {
+                for(int ic = 0; ic < c_per_group; ic++)
+                {
+                    int valid_w = 1;
+                    int cur_w   = sx * iwo - px + dx * ix;
+                    if(cur_w < 0 || cur_w >= wi)
+                        valid_w &= 0;
+
+                    if(valid_w & valid_h)
+                    {
+                        size_t i_idx = static_cast<size_t>(cur_h) * wi * c +
+                                       static_cast<size_t>(cur_w) * c + static_cast<size_t>(ic);
+                        size_t f_idx = static_cast<size_t>(ik) * fy * fx * c_per_group +
+                                       static_cast<size_t>(iy) * fx * c_per_group +
+                                       static_cast<size_t>(ix) * c_per_group +
+                                       static_cast<size_t>(ic);
+                        value += cast_to<src_data_t, acc_data_t>(p_in[i_idx]) *
+                                 cast_to<src_data_t, acc_data_t>(p_wei[f_idx]);
+                    }
+                }
+            }
+        }
+
+        double quanted_value = 0.0f;
+        auto elementwise_op_ = Activation_Mul_Clamp<PassThrough>{quantScale, PassThrough{}};
+        elementwise_op_(quanted_value, value);
+
+        size_t o_idx = static_cast<size_t>(iwo) * k + static_cast<size_t>(ik);
+        p_out[o_idx] = cast_to<double, dst_data_t>(quanted_value);
+    }
+}
+
 template <typename src_data_t, typename acc_data_t, typename dst_data_t>
 inline __device__ void naive_conv_bwd_nhwc(dst_data_t* __restrict__ p_in,
                                            const src_data_t* __restrict__ p_wei,
@@ -1323,6 +1412,52 @@ inline __device__ void naive_conv_wrw_ndhwc(const src_data_t* __restrict__ p_in,
                                                                            quantScale);    \
     }
 
+#define DEFINE_2D_NAIVE_FWD_CONV_QUANT_KERNEL(tensor_layout, src_data_t, acc_data_t, dst_data_t) \
+    extern "C" __global__ void                                                             \
+        naive_conv_fwd_quant_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t(       \
+            src_data_t* __restrict__ p_in,                                                 \
+            src_data_t* __restrict__ p_wei,                                                \
+            dst_data_t* __restrict__ p_out,                                                \
+            int hi,                                                                        \
+            int wi,                                                                        \
+            int n,                                                                         \
+            int k_per_group,                                                               \
+            int c_per_group,                                                               \
+            int ho,                                                                        \
+            int wo,                                                                        \
+            int sy,                                                                        \
+            int sx,                                                                        \
+            int dy,                                                                        \
+            int dx,                                                                        \
+            int py,                                                                        \
+            int px,                                                                        \
+            int fy,                                                                        \
+            int fx,                                                                        \
+            int group,                                                                     \
+            float quantScale)                                                              \
+    {                                                                                      \
+        naive_conv_fwd_quant_##tensor_layout<src_data_t, acc_data_t, dst_data_t>(p_in,           \
+                                                                           p_wei,          \
+                                                                           p_out,          \
+                                                                           hi,             \
+                                                                           wi,             \
+                                                                           n,              \
+                                                                           k_per_group,    \
+                                                                           c_per_group,    \
+                                                                           ho,             \
+                                                                           wo,             \
+                                                                           sy,             \
+                                                                           sx,             \
+                                                                           dy,             \
+                                                                           dx,             \
+                                                                           py,             \
+                                                                           px,             \
+                                                                           fy,             \
+                                                                           fx,             \
+                                                                           group,          \
+                                                                           quantScale);    \
+    }
+
 #define DEFINE_2D_NAIVE_BWD_CONV_KERNEL(tensor_layout, src_data_t, acc_data_t, dst_data_t) \
     extern "C" __global__ void                                                             \
         naive_conv_bwd_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t(       \
@@ -1590,7 +1725,9 @@ DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, ushort, double, ushort)
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, int32_t)
 DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, float)*/
 
-DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, int8_t)
+//DEFINE_2D_NAIVE_FWD_CONV_KERNEL(nhwc, int8_t, int32_t, int8_t)
+
+DEFINE_2D_NAIVE_FWD_CONV_QUANT_KERNEL(nhwc, int8_t, int32_t, int8_t)
 
 DEFINE_2D_NAIVE_BWD_CONV_KERNEL(nchw, float, double, float)
 DEFINE_2D_NAIVE_BWD_CONV_KERNEL(nchw, half, double, half)
