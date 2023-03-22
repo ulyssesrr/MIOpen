@@ -118,6 +118,7 @@ static auto GetDirectSolvers()
                                            miopen::solver::ConvOclDirectFwd1x1,
                                            miopen::solver::ConvOclDirectFwd,
                                            miopen::solver::ConvDirectNaiveConvFwd,
+                                           miopen::solver::ConvDirectNaiveConvQuant,
                                            miopen::solver::ConvDirectNaiveConvBwd,
                                            miopen::solver::ConvDirectNaiveConvWrw>{};
 }

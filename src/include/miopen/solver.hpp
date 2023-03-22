@@ -3919,6 +3919,34 @@ private:
     ConvSolution GetSolution(const ConvolutionContext&, const ProblemDescription&) const;
 };
 
+struct ConvDirectNaiveConvQuant final : ConvSolver
+{
+    // To suppress -Woverloaded-virtual
+    using ConvSolver::IsApplicable;
+
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<ConvDirectNaiveConvQuant>();
+    }
+
+    bool IsApplicable(const ConvolutionContext& ctx) const override
+    {
+        return IsApplicable(ctx, ctx.problem);
+    }
+    bool IsDynamic() const override { return true; }
+    /// Use very small fixed value enough to backup GEMM for cases when
+    /// GEMM is disabled due to MIOpenGemm or OCL compiler issues.
+    float GetWti(const ConvolutionContext&) const override { return 0.01; }
+    ConvSolution GetSolution(const ConvolutionContext& ctx) const
+    {
+        return GetSolution(ctx, ctx.problem);
+    }
+
+private:
+    bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
+    ConvSolution GetSolution(const ConvolutionContext&, const ProblemDescription&) const;
+};
+
 struct ConvDirectNaiveConvBwd final : ConvSolver
 {
     // To suppress -Woverloaded-virtual

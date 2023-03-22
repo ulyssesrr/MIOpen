@@ -553,6 +553,7 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
         registry, ++id, Primitive::Fusion, solver::fusion::BnBwdTrgActivationFused{}.SolverDbId());
     RegisterWithSolver(
         registry, ++id, ConvHipImplicitGemmConvFwdLayerQuantXdlops{}, miopenConvolutionAlgoImplicitGEMM);
+    RegisterWithSolver(registry, ++id, ConvDirectNaiveConvQuant{}, miopenConvolutionAlgoDirect);
 
     // IMPORTANT: New solvers should be added to the end of the function!
 }
