@@ -383,7 +383,8 @@ template <typename T, typename Tout = T>
 tensor<Tout> ref_conv_fwd(const tensor<T>& input,
                           const tensor<T>& weights,
                           const tensor<Tout>& out,
-                          const miopen::ConvolutionDescriptor& filter)
+                          const miopen::ConvolutionDescriptor& filter,
+                          bool isQuant)
 {
     auto rout = out;
     if(filter.mode == miopenTranspose)
@@ -405,7 +406,7 @@ tensor<Tout> ref_conv_fwd(const tensor<T>& input,
     }
     else
     {
-        bool gpu_ref_used = gpu_ref_convolution_fwd(input, weights, rout, filter);
+        bool gpu_ref_used = gpu_ref_convolution_fwd(input, weights, rout, filter, isQuant);
 
         if(!gpu_ref_used)
         {
@@ -462,7 +463,7 @@ struct verify_forward_conv : conv_base<T, Tout>
 
     tensor<Tout> cpu() const
     {
-        auto rout = ref_conv_fwd(input, weights, out, filter);
+        auto rout = ref_conv_fwd(input, weights, out, filter, false);
         if(filter.mode != miopenTranspose)
         {
             bool is_int8 =

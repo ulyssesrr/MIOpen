@@ -38,7 +38,8 @@ template <typename Tin, typename Twei, typename Tout>
 bool gpu_ref_convolution_fwd(const tensor<Tin>& input,
                              const tensor<Twei>& weights,
                              tensor<Tout>& rout,
-                             miopen::ConvolutionDescriptor filter)
+                             miopen::ConvolutionDescriptor filter,
+                             bool isQuant)
 {
     bool gpu_ref_used = false;
     if(!miopen::IsEnabled(MIOPEN_DEBUG_TEST_DISABLE_GPU_REF{}))
@@ -47,7 +48,10 @@ bool gpu_ref_convolution_fwd(const tensor<Tin>& input,
         auto in_dev              = handle.Write(input.data);
         auto wei_dev             = handle.Write(weights.data);
         auto out_dev             = handle.Write(rout.data);
-        const auto naive_conv_id = miopen::solver::Id{"ConvDirectNaiveConvFwd"};
+        std::string solver_id_str = "ConvDirectNaiveConvFwd";
+        if(isQuant)
+            solver_id_str = "ConvDirectNaiveConvQuant";
+        const auto naive_conv_id = miopen::solver::Id{solver_id_str}; //before: ConvDirectNaiveConvFwd
         const auto naive_solver  = naive_conv_id.GetSolver();
 
         const auto tensors = miopen::ConvFwdTensors{
