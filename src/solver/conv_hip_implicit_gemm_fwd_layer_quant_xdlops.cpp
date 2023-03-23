@@ -44,7 +44,7 @@ namespace solver {
 using ActivationOp = ck::tensor_operation::element_wise::PassThrough;
 using OElementOp = ck::tensor_operation::element_wise::Activation_Mul_Clamp<ActivationOp>;
 
-static float quantScale = 0.5f;
+static float quantScale = 0.5f; // hardcode for testing. It will be replace by value passing from API either tensor or problem description
 
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
 template <typename DataType>
@@ -84,18 +84,6 @@ struct CKArgsGFwd
         input    = {G, N, Hi, Wi, C};
         output   = {G, N, Ho, Wo, K};
         weight   = {G, K, Y, X, C};
-    /*std::cout<<"in struct"<<std::endl;
-    std::cout<<"**********************************************G: "<<G<<std::endl;
-    std::cout<<"**********************************************N: "<<N<<std::endl;
-    std::cout<<"**********************************************K: "<<K<<std::endl;
-    std::cout<<"**********************************************C: "<<C<<std::endl;
-    std::cout<<"**********************************************Hi: "<<input[2]<<std::endl;
-    std::cout<<"**********************************************Wi: "<<input[3]<<std::endl;
-    std::cout<<"**********************************************Ho: "<<output[2]<<std::endl;
-    std::cout<<"**********************************************Wo: "<<output[3]<<std::endl;
-    std::cout<<"**********************************************Y: "<<weight[2]<<std::endl;
-    std::cout<<"**********************************************X: "<<weight[3]<<std::endl;
-    std::cout<<std::endl;*/
         strides  = {ProblemInterpreter::GetAdjustedConvolutionStrideH(problem),
                    ProblemInterpreter::GetAdjustedConvolutionStrideW(problem)};
         dilation = {ProblemInterpreter::GetAdjustedConvolutionDilationH(problem),
@@ -132,13 +120,6 @@ struct CKArgsGFwd
             rbegin(output), std::next(rbegin(output)), std::next(rbegin(output), 3));
         std::rotate(
             rbegin(out_strides), std::next(rbegin(out_strides)), std::next(rbegin(out_strides), 3));
-    /*std::cout<<"after computation"<<std::endl;
-    std::cout<<"**********************************************input[0]: "<<input[0]<<std::endl;
-    std::cout<<"**********************************************input[1]: "<<input[1]<<std::endl;
-    std::cout<<"**********************************************input[2]: "<<input[2]<<std::endl;
-    std::cout<<"**********************************************input[3]: "<<input[3]<<std::endl;
-    std::cout<<"**********************************************input[4]: "<<input[4]<<std::endl;
-    std::cout<<std::endl;*/
     }
     int G;
     int N;
@@ -162,76 +143,6 @@ struct CKArgsGFwd
     std::array<ck::index_t, 2> lPadding;
     std::array<ck::index_t, 2> rPadding;
 };
-/*
-struct CKArgsGFwd
-{
-    CKArgsGFwd(const ProblemDescription& problem)
-    {
-        G        = ProblemInterpreter::GetGroupCountG(problem);
-        N        = ProblemInterpreter::GetBatchN(problem);
-        K        = ProblemInterpreter::GetOutputChannelK(problem);
-        C        = ProblemInterpreter::GetInputChannelC(problem);
-        Hi       = ProblemInterpreter::GetInputHeightHi(problem);
-        Wi       = ProblemInterpreter::GetInputWidthWi(problem);
-        Ho       = ProblemInterpreter::GetOutputHeightHo(problem);
-        Wo       = ProblemInterpreter::GetOutputWidthWo(problem);
-        Y        = ProblemInterpreter::GetFilterHeightY(problem);
-        X        = ProblemInterpreter::GetFilterWidthX(problem);
-        input    = {G, N, C, ProblemInterpreter::GetInputHeightHi(problem),
-                 ProblemInterpreter::GetInputWidthWi(problem)};
-        output   = {G, N, K, ProblemInterpreter::GetOutputHeightHo(problem),
-                  ProblemInterpreter::GetOutputWidthWo(problem)};
-        weight   = {G, K, C, ProblemInterpreter::GetFilterHeightY(problem),
-                  ProblemInterpreter::GetFilterWidthX(problem)};
-        in_strides  = {N * Hi * Wi * C, Hi * Wi * C, 1, Wi * C, C};
-        out_strides = {N * Ho * Wo * C, Ho * Wo * C, 1, Wo * C, C};
-        wei_strides = {K * Y * X * C, Y * X * C, 1, X * C, C};
-        strides  = {ProblemInterpreter::GetAdjustedConvolutionStrideH(problem),
-                   ProblemInterpreter::GetAdjustedConvolutionStrideW(problem)};
-        dilation = {ProblemInterpreter::GetAdjustedConvolutionDilationH(problem),
-                    ProblemInterpreter::GetAdjustedConvolutionDilationW(problem)};
-        lPadding = {ProblemInterpreter::GetInputLeftPadH(problem),
-                    ProblemInterpreter::GetInputLeftPadW(problem)};
-        rPadding = {ProblemInterpreter::GetAdjustedInputRightPadH(problem),
-                    ProblemInterpreter::GetAdjustedInputRightPadW(problem)};
-    }
-    int G;
-    int N;
-    int K;
-    int C;
-    int Hi;
-    int Wi;
-    int Ho;
-    int Wo;
-    int Y;
-    int X;
-    std::array<ck::index_t, 5> input;
-    std::array<ck::index_t, 5> in_strides;
-    std::array<ck::index_t, 5> output;
-    std::array<ck::index_t, 5> out_strides;
-    std::array<ck::index_t, 5> weight;
-    std::array<ck::index_t, 5> wei_strides;
-    std::array<ck::index_t, 2> strides;
-    std::array<ck::index_t, 2> dilation;
-    std::array<ck::index_t, 2> lPadding;
-    std::array<ck::index_t, 2> rPadding;
-};
-*/
-struct SimpleDeviceMem
-{
-    SimpleDeviceMem() = delete;
-
-    SimpleDeviceMem(std::size_t mem_size) : p_mem_{}
-    {
-        (void)hipMalloc(static_cast<void**>(&p_mem_), mem_size);
-    }
-
-    void* GetDeviceBuffer() { return p_mem_; }
-
-    ~SimpleDeviceMem() { (void)hipFree(p_mem_); }
-
-    void* p_mem_;
-};
 
 using InDataType  = int8_t;
 using WeiDataType = int8_t;
@@ -241,19 +152,6 @@ using InLayout     = ck::tensor_layout::convolution::GNHWC;
 using WeiLayout    = ck::tensor_layout::convolution::GKYXC;
 using OutLayout    = ck::tensor_layout::convolution::GNHWK;
 using PassThrough  = ck::tensor_operation::element_wise::PassThrough;
-/*
-//static constexpr ck::index_t NumDimSpatial = 2;
-static constexpr ck::index_t G             = 1;
-static constexpr ck::index_t N             = 256;
-static constexpr ck::index_t K             = 192;
-static constexpr ck::index_t C             = 192;
-static constexpr ck::index_t Y             = 3;
-static constexpr ck::index_t X             = 3;
-static constexpr ck::index_t Hi            = 28;
-static constexpr ck::index_t Wi            = 28;
-static constexpr ck::index_t Ho            = 28;
-static constexpr ck::index_t Wo            = 28;
-*/
 
 template <typename DataType>
 void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::Init(const ProblemDescription& problem)
@@ -287,7 +185,6 @@ void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::Init(const Problem
             valid_kernels.push_back(conv_ptrs[i]->GetTypeIdName());
         }
     }
-    std::cout<<"valid_kernels.size()"<<valid_kernels.size()<<std::endl;
     assert(!valid_kernels.empty());
     this->index     = 0;
     this->kernel_id = valid_kernels[0];
@@ -338,25 +235,10 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::CheckCKApplicability(const Prob
 {
     const auto conv_ptrs = DeviceOpGFwdQuantPtrs<DataType>::GetInstances();
     assert(!conv_ptrs.empty());
-    std::cout<<" conv_ptrs.size(): "<<conv_ptrs.size()<<std::endl;
     const auto args = CKArgsGFwd{problem};
     if(!std::all_of(args.strides.begin(), args.strides.end(), [&](auto x) { return x == 1; }))
         return false;
-    /*
-    std::array<ck::index_t, 5> in_lengths{G, N, C, Hi, Wi};
-    std::array<ck::index_t, 5> in_strides{N * Hi * Wi * C, Hi * Wi * C, 1, Wi * C, C};
-    std::array<ck::index_t, 5> weight_lengths{G, K, C, Y, X};
-    std::array<ck::index_t, 5> weight_strides{K * Y * X * C, Y * X * C, 1, X * C, C};
-    std::array<ck::index_t, 5> out_lengths{G, N, C, Ho, Wo};
-    std::array<ck::index_t, 5> out_strides{N * Ho * Wo * C, Ho * Wo * C, 1, Wo * C, C};
-    std::array<ck::index_t, 2> in_left_pad{1, 1};
-    std::array<ck::index_t, 2> in_right_pad{1, 1};
-    std::array<ck::index_t, 2> conv_strides{1, 1};
-    std::array<ck::index_t, 2> conv_dilations{1, 1};
-
-    SimpleDeviceMem in(sizeof(InDataType) * N * Hi * Wi * C);
-    SimpleDeviceMem wei(sizeof(WeiDataType) * K * Y * X * C);
-    SimpleDeviceMem out(sizeof(OutDataType) * N * Ho * Wo * K);*/
+ 
     for(int i = 0; i < conv_ptrs.size(); i++)
     {
         auto argument_ptr = conv_ptrs[i]->MakeArgumentPointer(nullptr,
@@ -381,7 +263,6 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::CheckCKApplicability(const Prob
         if(conv_ptrs[i]->IsSupportedArgument(argument_ptr.get()))
             return true;
     }
-    std::cout<<"****error****"<<std::endl;
     return false;
 }
 
@@ -431,34 +312,9 @@ void ConvHipImplicitGemmConvFwdLayerQuantXdlops::RunCKSolution(
     auto invoker_ptr            = conv_ptr->MakeInvokerPointer();
     const auto enable_profiling = handle.IsProfilingEnabled();
 
-    std::cout<<"*********run ck solution**********"<<std::endl;
-    auto& xDesc = tensors.inDesc;
-    /*auto& wDesc = tensors.wDesc;
-    auto& yDesc = tensors.outDesc;
-    std::cout<<"**********************************************G: "<<args.G<<std::endl;
-    std::cout<<"**********************************************N: "<<args.N<<std::endl;
-    std::cout<<"**********************************************K: "<<args.K<<std::endl;
-    std::cout<<"**********************************************C: "<<args.C<<std::endl;*/   
-    std::cout<<"****************************problem.conv_problem.GetInLayout(): "<<problem.conv_problem.GetInLayout()<<std::endl;
-    std::cout<<"****************************xDesc.GetLayout_str(): "<<xDesc.GetLayout_str()<<std::endl;
-    /*std::cout<<"****************************yDesc.GetLayout_t(): "<<yDesc.GetLayout_t()<<std::endl;
-    std::cout<<"****************************strides[0]: "<<args.in_strides[0]<<std::endl;
-    std::cout<<"****************************strides[1]: "<<args.in_strides[1]<<std::endl;
-    std::cout<<"****************************strides[2]: "<<args.in_strides[2]<<std::endl;
-    std::cout<<"****************************strides[3]: "<<args.in_strides[3]<<std::endl;
-    std::cout<<"****************************strides[4]: "<<args.in_strides[4]<<std::endl;
-    std::cout<<"****************************xDesc.GetLengths()[0]: "<<xDesc.GetLengths()[0]<<std::endl;
-    std::cout<<"****************************xDesc.GetLengths()[1]: "<<xDesc.GetLengths()[1]<<std::endl;
-    std::cout<<"****************************xDesc.GetLengths()[2]: "<<xDesc.GetLengths()[2]<<std::endl;
-    std::cout<<"****************************xDesc.GetLengths()[3]: "<<xDesc.GetLengths()[3]<<std::endl;
-    std::cout<<"****************************wDesc.GetLengths()[0]: "<<wDesc.GetLengths()[0]<<std::endl;
-    std::cout<<"****************************wDesc.GetLengths()[1]: "<<wDesc.GetLengths()[1]<<std::endl;
-    std::cout<<"****************************wDesc.GetLengths()[2]: "<<wDesc.GetLengths()[2]<<std::endl;
-    std::cout<<"****************************wDesc.GetLengths()[3]: "<<wDesc.GetLengths()[3]<<std::endl;*/
-
     float elapsed_time =
         invoker_ptr->Run(argument_ptr.get(), {handle.GetStream(), enable_profiling});
-    std::cout<<" Run CK successfully!"<<std::endl;
+
     if(enable_profiling)
     {
         handle.ResetKernelTime();
@@ -472,13 +328,11 @@ void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::HeuristicInit(cons
 #if !MIOPEN_BACKEND_HIP || !MIOPEN_USE_COMPOSABLEKERNEL
     std::ignore = problem;
 #else
-    std::cout<<"*****problem.conv_problem.GetInDataType(): "<<problem.conv_problem.GetInDataType()<<std::endl;
     switch(problem.conv_problem.GetInDataType())
     {
-    //std::cout<<" "<<problem.conv_problem.GetInDataType()<<std::endl;
     case miopenInt8: Init<int8_t>(problem); break;
-    case miopenHalf: //Init<ck::half_t>(problem); break;
-    case miopenFloat: //Init<float>(problem); break;
+    case miopenHalf:
+    case miopenFloat:
     case miopenInt32:
     case miopenInt8x4:
     case miopenBFloat16:
@@ -519,8 +373,8 @@ bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::IsValid(const Prob
     switch(problem.conv_problem.GetInDataType())
     {
     case miopenInt8: return CheckIsSupportCKArgs<int8_t>(problem);
-    case miopenHalf: //return CheckIsSupportCKArgs<ck::half_t>(problem);
-    case miopenFloat: //return CheckIsSupportCKArgs<float>(problem);
+    case miopenHalf:
+    case miopenFloat:
     case miopenInt32:
     case miopenInt8x4:
     case miopenBFloat16:
@@ -579,19 +433,16 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::IsApplicable(const ConvolutionC
         return false;
     if(!problem.Is2d())
         return false;
-    if(!problem.IsLayoutNHWC())
-    {   
-        std::cout<<"not NHWC"<<std::endl;
+    if(!problem.IsLayoutNHWC()) 
         return false;
-    }
     const std::string& arch = ctx.GetStream().GetDeviceName();
     if(!(arch == "gfx908" || arch == "gfx90a"))
         return false;
     switch(problem.conv_problem.GetInDataType())
     {
     case miopenInt8: return CheckCKApplicability<int8_t>(problem);
-    case miopenHalf: //return CheckCKApplicability<ck::half_t>(problem);
-    case miopenFloat: //return CheckCKApplicability<float>(problem);
+    case miopenHalf:
+    case miopenFloat:
     case miopenInt32:
     case miopenInt8x4:
     case miopenBFloat16:
@@ -622,11 +473,7 @@ ConvSolution ConvHipImplicitGemmConvFwdLayerQuantXdlops::GetSolution(
                 RunCKSolution<int8_t>(handle, primitive_parameters, problem, config);
                 break;
             case miopenHalf:
-                //RunCKSolution<ck::half_t>(handle, primitive_parameters, problem, config);
-                //break;
             case miopenFloat:
-                //RunCKSolution<float>(handle, primitive_parameters, problem, config);
-                //break;
             case miopenInt32:
             case miopenInt8x4:
             case miopenBFloat16:

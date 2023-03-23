@@ -124,20 +124,13 @@ struct ConvTestCase
 std::vector<ConvTestCase> ConvTestConfigs()
 { // g  n  c   h   w   k   y  x pad_x pad_y stri_x stri_y dia_x dia_y
     return {{1, 256, 128, 28, 28, 128, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
-            {1, 1, 1, 4, 4, 1, 1, 1, 0, 0, 1, 1, 1, 1, miopenConvolution},
             {1, 256, 192, 28, 28, 192, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution}};
-    /*return {{16, 128, 16, 16, 128, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
-            {64, 128, 28, 28, 128, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
-            {64, 256, 14, 14, 256, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
-            {64, 512, 7, 7, 512, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution},
-            {64, 1024, 14, 14, 1024, 3, 3, 1, 1, 1, 1, 1, 1, miopenConvolution}};*/
 }
 
 inline int SetTensorLayout(miopen::TensorDescriptor& desc)
 {
     // get layout string names
     std::string layout_str = desc.GetLayout_str();
-    std::cout<<layout_str<<std::endl;
 
     std::vector<std::size_t> lens = desc.GetLengths();
     std::vector<int> int_lens(lens.begin(), lens.end());
@@ -155,19 +148,10 @@ protected:
     {
         test_skipped                = false;
         std::tie(algo, conv_config, tensor_layout) = GetParam();
-        //input   = tensor<T>{conv_config.N, conv_config.C, conv_config.H, conv_config.W};
-        //weights = tensor<T>{1, conv_config.k, conv_config.x, conv_config.y};
-
-        //input   = tensor<T>{miopen_type<T>{}, tensor_layout, conv_config.GetInput(), conv_config.GetInStrides()};
-        //weights = tensor<T>{miopen_type<T>{}, tensor_layout, conv_config.GetWeights(), conv_config.GetWeiStrides()};
-
         input   = tensor<T>{miopen_type<T>{}, tensor_layout, conv_config.GetInput()};
         weights = tensor<T>{miopen_type<T>{}, tensor_layout, conv_config.GetWeights()};
         SetTensorLayout(input.desc);
         SetTensorLayout(weights.desc);
-        //std::cout<<"222222 "<<input.desc.GetLayout_str()<<std::endl;
-        //input.generate(tensor_elem_gen_integer{17});
-        //weights.generate(tensor_elem_gen_integer{17});
         std::random_device rd{};
         std::mt19937 gen{rd()};
         std::uniform_real_distribution<> d{-3, 3};
@@ -180,7 +164,6 @@ protected:
         miopen::TensorDescriptor output_desc =
             conv_desc.GetForwardOutputTensor(input.desc, weights.desc, GetDataType<T>());
         output = tensor<T>{miopen_type<T>{}, tensor_layout, output_desc.GetLengths()};
-        //output = tensor<T>{miopen_type<T>{}, tensor_layout, output_desc.GetLengths(), conv_config.GetOutStrides()};
         SetTensorLayout(output.desc);
         std::fill(output.begin(), output.end(), std::numeric_limits<double>::quiet_NaN());
 
@@ -188,7 +171,6 @@ protected:
         in_dev        = handle.Write(input.data);
         wei_dev       = handle.Write(weights.data);
         out_dev       = handle.Write(output.data);
-        //std::cout<<"in_dev: "<<in_dev<<std::endl;
     }
     void TearDown() override
     {
@@ -199,24 +181,9 @@ protected:
 
         miopen::TensorDescriptor output_desc =
             conv_desc.GetForwardOutputTensor(input.desc, weights.desc, GetDataType<T>());
-        //ref_out = tensor<T>{output_desc.GetLengths()};
         ref_out = tensor<T>{miopen_type<T>{}, tensor_layout, output_desc.GetLengths()};
         ref_out = ref_conv_fwd(input, weights, output, conv_desc, true);
-        //std::cout<<"ref_out.data.size(): "<<ref_out.data.size()<<std::endl;
-        //for(const auto& x:ref_out.data){
-        //    std::cout<<"x= "<<(float)x<<",";
-        //}
-        std::cout<<std::endl;
-        /*       
-        cpu_convolution_forward(conv_desc.GetSpatialDimension(),
-                                input,
-                                weights,
-                                ref_out,
-                                conv_desc.GetConvPads(),
-                                conv_desc.GetConvStrides(),
-                                conv_desc.GetConvDilations(),
-                                conv_desc.GetGroupCount());
-        */
+
         output.data = handle.Read<T>(out_dev, output.data.size());
         EXPECT_FALSE(miopen::range_zero(ref_out)) << "Cpu data is all zeros";
         EXPECT_FALSE(miopen::range_zero(output)) << "Gpu data is all zeros";
@@ -224,7 +191,6 @@ protected:
 
         const double tolerance = 80;
         double threshold       = std::numeric_limits<float>::epsilon() * tolerance;
-        std::cout<<"*****threshold: "<<threshold<<std::endl;
         auto error             = miopen::rms_range(ref_out, output);
 
         EXPECT_FALSE(miopen::find_idx(ref_out, miopen::not_finite) >= 0)

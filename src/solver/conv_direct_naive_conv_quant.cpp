@@ -52,7 +52,6 @@ bool ConvDirectNaiveConvQuant::IsApplicable(const ConvolutionContext& ctx,
 
     if(!problem.direction.IsForward())
         return false;
-    std::cout<<" called here is applicable"<<std::endl;
     return true;
 }
 
@@ -127,7 +126,6 @@ ConvSolution ConvDirectNaiveConvQuant::GetSolution(const ConvolutionContext& ctx
                 decltype(auto) data_ctx = primitive_parameters.CastTo<conv::DataInvokeParams>();
                 const auto& tensors     = data_ctx.tensors;
                 float elapsed           = 0;
-                std::cout<<"inside invoker factory"<<std::endl;
                 handle.Run(kern)(tensors.in,
                                  tensors.w,
                                  tensors.out,
