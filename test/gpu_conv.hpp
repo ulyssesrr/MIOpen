@@ -39,7 +39,7 @@ bool gpu_ref_convolution_fwd(const tensor<Tin>& input,
                              const tensor<Twei>& weights,
                              tensor<Tout>& rout,
                              miopen::ConvolutionDescriptor filter,
-                             bool isQuant)
+                             bool isQuant = false)
 {
     bool gpu_ref_used = false;
     if(!miopen::IsEnabled(MIOPEN_DEBUG_TEST_DISABLE_GPU_REF{}))

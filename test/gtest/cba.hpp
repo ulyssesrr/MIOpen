@@ -165,7 +165,7 @@ protected:
         miopen::TensorDescriptor output_desc =
             conv_desc.GetForwardOutputTensor(input.desc, weights.desc, miopenFloat);
         ref_out = tensor<T>{output_desc.GetLengths()};
-        ref_out = ref_conv_fwd(input, weights, output, conv_desc, false);
+        ref_out = ref_conv_fwd(input, weights, output, conv_desc);
         cpu_bias_forward(ref_out, bias);
         activationHostInfer(
             activ_mode, activ_gamma, activ_beta, activ_alpha, ref_out.data, ref_out.data);

@@ -384,7 +384,7 @@ tensor<Tout> ref_conv_fwd(const tensor<T>& input,
                           const tensor<T>& weights,
                           const tensor<Tout>& out,
                           const miopen::ConvolutionDescriptor& filter,
-                          bool isQuant)
+                          bool isQuant = false)
 {
     auto rout = out;
     if(filter.mode == miopenTranspose)
@@ -463,7 +463,7 @@ struct verify_forward_conv : conv_base<T, Tout>
 
     tensor<Tout> cpu() const
     {
-        auto rout = ref_conv_fwd(input, weights, out, filter, false);
+        auto rout = ref_conv_fwd(input, weights, out, filter);
         if(filter.mode != miopenTranspose)
         {
             bool is_int8 =

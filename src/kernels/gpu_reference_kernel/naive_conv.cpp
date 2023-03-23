@@ -44,10 +44,6 @@ typedef float float_t;
 #endif
 #endif // __HIPCC_RTC__
 
-//#include "/home/dfeng/dfeng/miopen/develop_with_branches/MIOpen/src/kernels/gpu_reference_kernel/quant_ops.hpp"
-//#include "src/include/miopen/quantization_op.hpp"
-//#include<bfloat16.hpp>
-
 // hcc seems need __device__ __host__ together to compile, and no extern "C"
 typedef union value_bf16_fp32_t
 {
