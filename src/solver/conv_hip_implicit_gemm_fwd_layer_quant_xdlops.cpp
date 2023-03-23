@@ -182,7 +182,7 @@ void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::Init(const Problem
                                                               OElementOp{quantScale, ActivationOp{}});
         if(conv_ptrs[i]->IsSupportedArgument(argument_ptr.get()))
         {
-            valid_kernels.push_back(conv_ptrs[i]->GetTypeIdName());
+            valid_kernels.push_back(conv_ptrs[i]->GetTypeString());
         }
     }
     assert(!valid_kernels.empty());
@@ -199,7 +199,7 @@ bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::CheckIsSupportCKAr
     int i                = 0;
     for(; i < conv_ptrs.size(); i++)
     {
-        if(conv_ptrs[i]->GetTypeIdName() == this->kernel_id)
+        if(conv_ptrs[i]->GetTypeString() == this->kernel_id)
         {
             break;
         }
@@ -266,19 +266,21 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::CheckCKApplicability(const Prob
     return false;
 }
 
+namespace {
+
 template <typename DataType>
-void ConvHipImplicitGemmConvFwdLayerQuantXdlops::RunCKSolution(
+void RunCKSolution(
     const Handle& handle,
     const AnyInvokeParams& primitive_parameters,
     const ProblemDescription& problem,
-    const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config) const
+    const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config)
 {
     const auto args      = CKArgsGFwd{problem};
     const auto conv_ptrs = DeviceOpGFwdQuantPtrs<DataType>::GetInstances();
     int i                = 0;
     for(; i < conv_ptrs.size(); i++)
     {
-        if(conv_ptrs[i]->GetTypeIdName() == config.kernel_id)
+        if(conv_ptrs[i]->GetTypeString() == config.kernel_id)
         {
             break;
         }
@@ -321,6 +323,8 @@ void ConvHipImplicitGemmConvFwdLayerQuantXdlops::RunCKSolution(
         handle.AccumKernelTime(elapsed_time);
     }
 }
+
+} //namespace
 #endif
 
 void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::HeuristicInit(const ProblemDescription& problem)
