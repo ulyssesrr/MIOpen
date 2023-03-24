@@ -42,9 +42,10 @@ namespace miopen {
 namespace solver {
 
 using ActivationOp = ck::tensor_operation::element_wise::PassThrough;
-using OElementOp = ck::tensor_operation::element_wise::Activation_Mul_Clamp<ActivationOp>;
+using OElementOp   = ck::tensor_operation::element_wise::Activation_Mul_Clamp<ActivationOp>;
 
-static float quantScale = 0.5f; // hardcode for testing. It will be replace by value passing from API either tensor or problem description
+static float quantScale = 0.5f; // hardcode for testing. It will be replace by value passing from
+                                // API either tensor or problem description
 
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
 template <typename DataType>
@@ -64,60 +65,57 @@ using DeviceOpGFwdQuant = ck::tensor_operation::device::DeviceGroupedConvFwdMult
 
 template <typename DataType>
 using DeviceOpGFwdQuantPtrs =
-    ck::tensor_operation::device::instance::DeviceOperationInstanceFactory<DeviceOpGFwdQuant<DataType>>;
+    ck::tensor_operation::device::instance::DeviceOperationInstanceFactory<
+        DeviceOpGFwdQuant<DataType>>;
 
 struct CKArgsGFwd
 {
     CKArgsGFwd(const ProblemDescription& problem)
     {
-        G        = ProblemInterpreter::GetGroupCountG(problem);
-        N        = ProblemInterpreter::GetBatchN(problem);
-        K        = ProblemInterpreter::GetOutputChannelK(problem);
-        C        = ProblemInterpreter::GetInputChannelC(problem);
-        C1       = C/G;
-        Hi       = ProblemInterpreter::GetInputHeightHi(problem);
-        Wi       = ProblemInterpreter::GetInputWidthWi(problem);
-        Ho       = ProblemInterpreter::GetOutputHeightHo(problem);
-        Wo       = ProblemInterpreter::GetOutputWidthWo(problem);
-        Y        = ProblemInterpreter::GetFilterHeightY(problem);
-        X        = ProblemInterpreter::GetFilterWidthX(problem);
-        input    = {G, N, Hi, Wi, C};
-        output   = {G, N, Ho, Wo, K};
-        weight   = {G, K, Y, X, C};
-        strides  = {ProblemInterpreter::GetAdjustedConvolutionStrideH(problem),
+        G           = ProblemInterpreter::GetGroupCountG(problem);
+        N           = ProblemInterpreter::GetBatchN(problem);
+        K           = ProblemInterpreter::GetOutputChannelK(problem);
+        C           = ProblemInterpreter::GetInputChannelC(problem);
+        Hi          = ProblemInterpreter::GetInputHeightHi(problem);
+        Wi          = ProblemInterpreter::GetInputWidthWi(problem);
+        Ho          = ProblemInterpreter::GetOutputHeightHo(problem);
+        Wo          = ProblemInterpreter::GetOutputWidthWo(problem);
+        Y           = ProblemInterpreter::GetFilterHeightY(problem);
+        X           = ProblemInterpreter::GetFilterWidthX(problem);
+        input       = {G, N, Hi, Wi, C};
+        output      = {G, N, Ho, Wo, K};
+        weight      = {G, K, Y, X, C};
+        strides     = {ProblemInterpreter::GetAdjustedConvolutionStrideH(problem),
                    ProblemInterpreter::GetAdjustedConvolutionStrideW(problem)};
-        dilation = {ProblemInterpreter::GetAdjustedConvolutionDilationH(problem),
+        dilation    = {ProblemInterpreter::GetAdjustedConvolutionDilationH(problem),
                     ProblemInterpreter::GetAdjustedConvolutionDilationW(problem)};
-        lPadding = {ProblemInterpreter::GetInputLeftPadH(problem),
+        lPadding    = {ProblemInterpreter::GetInputLeftPadH(problem),
                     ProblemInterpreter::GetInputLeftPadW(problem)};
-        rPadding = {ProblemInterpreter::GetAdjustedInputRightPadH(problem),
+        rPadding    = {ProblemInterpreter::GetAdjustedInputRightPadH(problem),
                     ProblemInterpreter::GetAdjustedInputRightPadW(problem)};
-        in_strides = {0, 0, 0, 0, 1};
+        in_strides  = {0, 0, 0, 0, 1};
         out_strides = {0, 0, 0, 0, 1};
         wei_strides = {0, 0, 0, 0, 1};
         std::partial_sum(rbegin(input),
-                        std::prev(rend(input)),
-                        std::next(rbegin(in_strides)),
-                        std::multiplies<>{});
+                         std::prev(rend(input)),
+                         std::next(rbegin(in_strides)),
+                         std::multiplies<>{});
         std::partial_sum(rbegin(weight),
-                        std::prev(rend(weight)),
-                        std::next(rbegin(wei_strides)),
-                        std::multiplies<>{});
+                         std::prev(rend(weight)),
+                         std::next(rbegin(wei_strides)),
+                         std::multiplies<>{});
         std::partial_sum(rbegin(output),
-                        std::prev(rend(output)),
-                        std::next(rbegin(out_strides)),
-                        std::multiplies<>{});
+                         std::prev(rend(output)),
+                         std::next(rbegin(out_strides)),
+                         std::multiplies<>{});
 
-        std::rotate(
-            rbegin(input), std::next(rbegin(input)), std::next(rbegin(input), 3));
+        std::rotate(rbegin(input), std::next(rbegin(input)), std::next(rbegin(input), 3));
         std::rotate(
             rbegin(in_strides), std::next(rbegin(in_strides)), std::next(rbegin(in_strides), 3));
-        std::rotate(
-            rbegin(weight), std::next(rbegin(weight)), std::next(rbegin(weight), 3));
+        std::rotate(rbegin(weight), std::next(rbegin(weight)), std::next(rbegin(weight), 3));
         std::rotate(
             rbegin(wei_strides), std::next(rbegin(wei_strides)), std::next(rbegin(wei_strides), 3));
-        std::rotate(
-            rbegin(output), std::next(rbegin(output)), std::next(rbegin(output), 3));
+        std::rotate(rbegin(output), std::next(rbegin(output)), std::next(rbegin(output), 3));
         std::rotate(
             rbegin(out_strides), std::next(rbegin(out_strides)), std::next(rbegin(out_strides), 3));
     }
@@ -125,7 +123,6 @@ struct CKArgsGFwd
     int N;
     int K;
     int C;
-    int C1;
     int Hi;
     int Wi;
     int Ho;
@@ -144,42 +141,35 @@ struct CKArgsGFwd
     std::array<ck::index_t, 2> rPadding;
 };
 
-using InDataType  = int8_t;
-using WeiDataType = int8_t;
-using OutDataType = int8_t;
-
-using InLayout     = ck::tensor_layout::convolution::GNHWC;
-using WeiLayout    = ck::tensor_layout::convolution::GKYXC;
-using OutLayout    = ck::tensor_layout::convolution::GNHWK;
-using PassThrough  = ck::tensor_operation::element_wise::PassThrough;
-
 template <typename DataType>
-void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::Init(const ProblemDescription& problem)
+void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::Init(
+    const ProblemDescription& problem)
 {
     const auto args      = CKArgsGFwd{problem};
     const auto conv_ptrs = DeviceOpGFwdQuantPtrs<DataType>::GetInstances();
     assert(!conv_ptrs.empty());
     for(int i = 0; i < conv_ptrs.size(); i++)
     {
-        auto argument_ptr = conv_ptrs[i]->MakeArgumentPointer(nullptr,
-                                                              nullptr,
-                                                              {},
-                                                              nullptr,
-                                                              args.input,
-                                                              args.in_strides,
-                                                              args.weight,
-                                                              args.wei_strides,
-                                                              {},
-                                                              {},
-                                                              args.output,
-                                                              args.out_strides,
-                                                              args.strides,
-                                                              args.dilation,
-                                                              args.lPadding,
-                                                              args.rPadding,
-                                                              {},
-                                                              {},
-                                                              OElementOp{quantScale, ActivationOp{}});
+        auto argument_ptr =
+            conv_ptrs[i]->MakeArgumentPointer(nullptr,
+                                              nullptr,
+                                              {},
+                                              nullptr,
+                                              args.input,
+                                              args.in_strides,
+                                              args.weight,
+                                              args.wei_strides,
+                                              {},
+                                              {},
+                                              args.output,
+                                              args.out_strides,
+                                              args.strides,
+                                              args.dilation,
+                                              args.lPadding,
+                                              args.rPadding,
+                                              {},
+                                              {},
+                                              OElementOp{quantScale, ActivationOp{}});
         if(conv_ptrs[i]->IsSupportedArgument(argument_ptr.get()))
         {
             valid_kernels.push_back(conv_ptrs[i]->GetTypeString());
@@ -231,35 +221,37 @@ bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::CheckIsSupportCKAr
 }
 
 template <typename DataType>
-bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::CheckCKApplicability(const ProblemDescription& problem) const
+bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::CheckCKApplicability(
+    const ProblemDescription& problem) const
 {
     const auto conv_ptrs = DeviceOpGFwdQuantPtrs<DataType>::GetInstances();
     assert(!conv_ptrs.empty());
     const auto args = CKArgsGFwd{problem};
     if(!std::all_of(args.strides.begin(), args.strides.end(), [&](auto x) { return x == 1; }))
         return false;
- 
+
     for(int i = 0; i < conv_ptrs.size(); i++)
     {
-        auto argument_ptr = conv_ptrs[i]->MakeArgumentPointer(nullptr,
-                                                          nullptr,
-                                                          {},
-                                                          nullptr,
-                                                          args.input,
-                                                          args.in_strides,
-                                                          args.weight,
-                                                          args.wei_strides,
-                                                          {},
-                                                          {},
-                                                          args.output,
-                                                          args.out_strides,
-                                                          args.strides,
-                                                          args.dilation,
-                                                          args.lPadding,
-                                                          args.rPadding,
-                                                          {},
-                                                          {},
-                                                          OElementOp{quantScale, ActivationOp{}});
+        auto argument_ptr =
+            conv_ptrs[i]->MakeArgumentPointer(nullptr,
+                                              nullptr,
+                                              {},
+                                              nullptr,
+                                              args.input,
+                                              args.in_strides,
+                                              args.weight,
+                                              args.wei_strides,
+                                              {},
+                                              {},
+                                              args.output,
+                                              args.out_strides,
+                                              args.strides,
+                                              args.dilation,
+                                              args.lPadding,
+                                              args.rPadding,
+                                              {},
+                                              {},
+                                              OElementOp{quantScale, ActivationOp{}});
         if(conv_ptrs[i]->IsSupportedArgument(argument_ptr.get()))
             return true;
     }
@@ -269,11 +261,10 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::CheckCKApplicability(const Prob
 namespace {
 
 template <typename DataType>
-void RunCKSolution(
-    const Handle& handle,
-    const AnyInvokeParams& primitive_parameters,
-    const ProblemDescription& problem,
-    const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config)
+void RunCKSolution(const Handle& handle,
+                   const AnyInvokeParams& primitive_parameters,
+                   const ProblemDescription& problem,
+                   const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config)
 {
     const auto args      = CKArgsGFwd{problem};
     const auto conv_ptrs = DeviceOpGFwdQuantPtrs<DataType>::GetInstances();
@@ -324,10 +315,11 @@ void RunCKSolution(
     }
 }
 
-} //namespace
+} // namespace
 #endif
 
-void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::HeuristicInit(const ProblemDescription& problem)
+void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::HeuristicInit(
+    const ProblemDescription& problem)
 {
 #if !MIOPEN_BACKEND_HIP || !MIOPEN_USE_COMPOSABLEKERNEL
     std::ignore = problem;
@@ -345,7 +337,8 @@ void PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::HeuristicInit(cons
 #endif
 }
 
-bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::SetNextValue(const ProblemDescription& problem)
+bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::SetNextValue(
+    const ProblemDescription& problem)
 {
     if(valid_kernels.empty())
     {
@@ -368,7 +361,8 @@ bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::IsValidValue() con
     return index < valid_kernels.size();
 }
 
-bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::IsValid(const ProblemDescription& problem) const
+bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::IsValid(
+    const ProblemDescription& problem) const
 {
 #if !MIOPEN_BACKEND_HIP || !MIOPEN_USE_COMPOSABLEKERNEL
     std::ignore = problem;
@@ -395,7 +389,8 @@ bool PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops::operator==(
 }
 
 PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops
-ConvHipImplicitGemmConvFwdLayerQuantXdlops::GetDefaultPerformanceConfig(const ProblemDescription& problem) const
+ConvHipImplicitGemmConvFwdLayerQuantXdlops::GetDefaultPerformanceConfig(
+    const ProblemDescription& problem) const
 {
     PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops pp;
     pp.HeuristicInit(problem);
@@ -411,14 +406,14 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::IsValidPerformanceConfig(
 
 PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops
 ConvHipImplicitGemmConvFwdLayerQuantXdlops::Search(const ConvolutionContext& ctx,
-                                     const ProblemDescription& problem,
-                                     const AnyInvokeParams& invoke_ctx) const
+                                                   const ProblemDescription& problem,
+                                                   const AnyInvokeParams& invoke_ctx) const
 {
     return GenericSearch(*this, ctx, problem, invoke_ctx);
 }
 
-bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::IsApplicable(const ConvolutionContext& ctx,
-                                                const ProblemDescription& problem) const
+bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::IsApplicable(
+    const ConvolutionContext& ctx, const ProblemDescription& problem) const
 {
 #if !MIOPEN_BACKEND_HIP || !MIOPEN_USE_COMPOSABLEKERNEL
     std::ignore = ctx;
@@ -437,7 +432,7 @@ bool ConvHipImplicitGemmConvFwdLayerQuantXdlops::IsApplicable(const ConvolutionC
         return false;
     if(!problem.Is2d())
         return false;
-    if(!problem.IsLayoutNHWC()) 
+    if(!problem.IsLayoutNHWC())
         return false;
     const std::string& arch = ctx.GetStream().GetDeviceName();
     if(!(arch == "gfx908" || arch == "gfx90a"))

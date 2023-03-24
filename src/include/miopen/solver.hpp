@@ -5856,7 +5856,8 @@ struct PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops
         : index(idx), kernel_id(kernl_id)
     {
     }
-    PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops() : PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops(0, "")
+    PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops()
+        : PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops(0, "")
     {
     }
     PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops(bool)
@@ -5903,9 +5904,9 @@ struct ConvHipImplicitGemmConvFwdLayerQuantXdlops final
     {
         return GetDefaultPerformanceConfig(ctx.problem);
     }
-    bool
-    IsValidPerformanceConfig(const ConvolutionContext& ctx,
-                             const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config) const override
+    bool IsValidPerformanceConfig(
+        const ConvolutionContext& ctx,
+        const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config) const override
     {
         return IsValidPerformanceConfig(ctx.problem, config);
     }
@@ -5919,8 +5920,9 @@ struct ConvHipImplicitGemmConvFwdLayerQuantXdlops final
         return IsApplicable(ctx, ctx.problem);
     }
     bool IsDynamic() const override { return true; }
-    ConvSolution GetSolution(const ConvolutionContext& ctx,
-                             const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config) const override
+    ConvSolution GetSolution(
+        const ConvolutionContext& ctx,
+        const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops& config) const override
     {
         return GetSolution(ctx, ctx.problem, config);
     }
@@ -5940,11 +5942,13 @@ private:
     bool IsApplicable(const ConvolutionContext&, const ProblemDescription&) const;
     PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops
     GetDefaultPerformanceConfig(const ProblemDescription&) const;
-    bool IsValidPerformanceConfig(const ProblemDescription&,
-                                  const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops&) const;
-    PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops Search(const ConvolutionContext&,
-                                                     const ProblemDescription&,
-                                                     const AnyInvokeParams& invoke_ctx) const;
+    bool
+    IsValidPerformanceConfig(const ProblemDescription&,
+                             const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops&) const;
+    PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops
+    Search(const ConvolutionContext&,
+           const ProblemDescription&,
+           const AnyInvokeParams& invoke_ctx) const;
     ConvSolution GetSolution(const ConvolutionContext&,
                              const ProblemDescription&,
                              const PerformanceConfigHipImplicitGemmConvFwdLayerQuantXdlops&) const;
