@@ -16,7 +16,7 @@ void testGetConvolutionSpatialDim(void)
         miopenInitConvolutionNdDescriptor(
             conv_desc, i, pads, strides, dilations, miopenConvolutionMode_t::miopenConvolution);
         miopenGetConvolutionSpatialDim(conv_desc, &spatial_dim);
-        ASSERT_EQ(spatial_dim, i) << "Spatial Dimension does not match at index: " << i
+        ASSERT_EQ(spatial_dim, i) << "Spatialll Dimension does not match at index: " << i
                                   << std::endl;
     }
 }
