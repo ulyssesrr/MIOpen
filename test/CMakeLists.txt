@@ -50,7 +50,6 @@ endif()
     configure_file("${MODEL_FILE}" "${PROJECT_BINARY_DIR}/share/miopen/perf_models/${MODEL_FILE_FILENAME}" COPYONLY)
  endforeach()
 
-include(CTest)
 include(CheckCXXCompilerFlag)
 
 option( MIOPEN_TEST_ALL "Run the full test suite" OFF )
@@ -157,7 +156,7 @@ if(NOT (MIOPEN_TEST_GFX900 OR MIOPEN_TEST_GFX906 OR MIOPEN_TEST_GFX908 OR MIOPEN
     endif()
 endif()
 
-set_var_to_condition(MIOPEN_LIBMLIR_SUPPORTS_GFX103X_DEFAULT ${MIOPEN_USE_MLIR} AND (${rocMLIR_VERSION_FLAT} GREATER 100000000))
+set_var_to_condition(MIOPEN_LIBMLIR_SUPPORTS_GFX103X_DEFAULT ${MIOPEN_USE_MLIR} AND (${rocMLIR_VERSION} VERSION_GREATER_EQUAL 1))
 option( MIOPEN_LIBMLIR_SUPPORTS_GFX103X "libMLIR capability to support GFX10. Enables MLIR tests on GFX103X." ${MIOPEN_LIBMLIR_SUPPORTS_GFX103X_DEFAULT})
 
 set_var_to_condition(MIOPEN_TEST_MLIR_DEFAULT ${MIOPEN_USE_MLIR} AND NOT (${MIOPEN_TEST_GFX103X} AND NOT ${MIOPEN_LIBMLIR_SUPPORTS_GFX103X}))
@@ -302,14 +301,7 @@ function(add_test_command NAME EXE)
         add_test(NAME ${NAME} COMMAND echo skipped)
         set_tests_properties(${NAME} PROPERTIES DISABLED On)
     elseif(WIN32)
-        set(WINPATH)
-        foreach(PATH ${CMAKE_FIND_ROOT_PATH})
-            list(APPEND WINPATH ${PATH}/bin)
-        endforeach()
-        file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_${NAME}.cmd"
-            CONTENT "set PATH=${WINPATH};%PATH%
-                    %1 ${ARGN}")
-        add_test(NAME ${NAME} COMMAND ${WINE_CMD} cmd /c "${CMAKE_CURRENT_BINARY_DIR}/test_${NAME}.cmd" $<TARGET_FILE:${EXE}>)
+        add_test(NAME ${NAME} COMMAND $<TARGET_FILE:${EXE}> ${ARGN})
     else()
         if(MIOPEN_TEST_GDB)
             file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_${NAME}.cmake"
@@ -335,8 +327,7 @@ separate_arguments(MIOPEN_TEST_FLAGS_ARGS UNIX_COMMAND ${MIOPEN_TEST_FLAGS})
 function(add_test_executable TEST_NAME)
     add_executable (${TEST_NAME} EXCLUDE_FROM_ALL ${ARGN})
     clang_tidy_check(${TEST_NAME})
-    target_link_libraries(${TEST_NAME} ${CMAKE_THREAD_LIBS_INIT})
-    # Cmake does not add flags correctly for gcc
+    # CMake does not add flags correctly for gcc
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         set_target_properties(${TEST_NAME} PROPERTIES COMPILE_FLAGS -pthread LINK_FLAGS -pthread)
     endif()
@@ -368,11 +359,38 @@ function(add_test_executable TEST_NAME)
         set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL On)
     endif()
     if(NOT MIOPEN_EMBED_DB STREQUAL "")
-        target_link_libraries(${TEST_NAME} MIOpen miopen_data)
-    else()
-        target_link_libraries(${TEST_NAME} MIOpen)
+        target_link_libraries(${TEST_NAME} PRIVATE miopen_data)
     endif()
-endfunction(add_test_executable)
+    target_link_libraries(${TEST_NAME}
+        PRIVATE
+            Threads::Threads
+            MIOpen
+            MIOpenCore
+            hip::host
+            hip::device
+            nlohmann_json::nlohmann_json)
+    target_include_directories(${TEST_NAME} SYSTEM PRIVATE ${BZIP2_INCLUDE_DIR})
+    target_link_libraries(${TEST_NAME} PRIVATE ${BZIP2_LIBRARIES})
+    target_include_directories(${TEST_NAME} PRIVATE
+            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>)
+    target_include_directories(${TEST_NAME} SYSTEM PRIVATE $<BUILD_INTERFACE:${HALF_INCLUDE_DIR}>)
+    if(MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN_BACKEND STREQUAL "HIP")
+        target_link_libraries(${TEST_NAME} PRIVATE hip::device hip::host)
+    endif()
+    if(rocMLIR_FOUND)
+        target_link_libraries(${TEST_NAME} PRIVATE rocMLIR::rockCompiler)
+    endif()
+    target_compile_options(${TEST_NAME} PRIVATE
+            -ftemplate-backtrace-limit=0
+            -Wno-microsoft-template-shadow
+            -Wno-unused-variable
+            -Wno-missing-field-initializers)
+    if(WIN32 AND (CMAKE_CXX_COMPILER MATCHES ".*clang\\+\\+" OR CMAKE_C_COMPILER MATCHES ".*clang"))
+        # Refet to https://en.cppreference.com/w/cpp/language/types for details.
+        target_compile_options(${TEST_NAME} PRIVATE -U__LP64__)
+    endif()
+endfunction()
 
 set(MIOPEN_TEST_SANITIZERS)
 foreach(SANTIZER address thread)
@@ -1904,6 +1922,8 @@ if(MIOPEN_TEST_FLOAT)
     add_custom_test(test_reduce_double SKIP_UNLESS_ALL GFX94X_ENABLED GFX103X_ENABLED GFX110X_ENABLED COMMAND  $<TARGET_FILE:test_reduce_test> --double --all --verbose)
 endif()
 
+if(NOT WIN32)
+# TODO: port smoke tests to Windows
 add_custom_test(smoke_solver_ConvFFT GFX103X_ENABLED GFX110X_ENABLED
     COMMAND MIOPEN_FIND_MODE=normal MIOPEN_DEBUG_FIND_ONLY_SOLVER=fft $<TARGET_FILE:test_conv2d>
       ${TEST_CONV_VERBOSE_F} --input 1 16 14 14 --weights 48 16 5 5 --pads_strides_dilations 2 2 1 1 1 1 ${MIOPEN_TEST_FLAGS_ARGS}
@@ -2353,6 +2373,7 @@ add_custom_test(test_regression_half_vega_gfx908 FLOAT_DISABLED HALF_ENABLED GFX
 COMMAND	MIOPEN_FIND_MODE=normal MIOPEN_DEBUG_FIND_ONLY_SOLVER=ConvOclDirectFwd1x1 $<TARGET_FILE:test_conv2d> ${MIOPEN_TEST_FLOAT_ARG} --verbose --disable-backward-data --disable-backward-weights --disable-verification-cache
     --cmode conv --pmode default --group-count 1 --input 1 16 7 7 --weights 16 16 1 1 --pads_strides_dilations 0 0 1 1 1 1
 )
+endif()
 
 add_custom_test(test_regression_half_vega SKIP_UNLESS_ALL FLOAT_DISABLED HALF_ENABLED GFX908_DISABLED GFX90A_DISABLED
 # Issue #1956.

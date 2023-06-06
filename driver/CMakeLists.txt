@@ -23,13 +23,16 @@
 # SOFTWARE.
 # 
 ################################################################################
-cmake_minimum_required( VERSION 3.5)
-
-find_package(Threads REQUIRED)
+cmake_minimum_required( VERSION 3.11 )
 
 add_executable(MIOpenDriver main.cpp InputFlags.cpp)
-target_link_libraries(MIOpenDriver MIOpen)
-target_link_libraries(MIOpenDriver ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(MIOpenDriver PRIVATE MIOpen MIOpenCore ${BZIP2_LIBRARIES} Threads::Threads)
+
+if(WIN32 AND (CMAKE_CXX_COMPILER MATCHES ".*clang\\+\\+" OR CMAKE_C_COMPILER MATCHES ".*clang"))
+    # Refet to https://en.cppreference.com/w/cpp/language/types for details.
+    target_compile_options(MIOpenDriver PRIVATE -U__LP64__)
+endif()
+
 if(NOT MIOPEN_EMBED_DB STREQUAL "")
 target_link_libraries(MIOpenDriver $<BUILD_INTERFACE:miopen_data> )
 endif()
