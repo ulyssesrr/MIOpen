@@ -96,6 +96,7 @@ void Run2dDriver(miopenDataType_t prec)
         test_drive<conv2d_driver>(ptrs.size(), ptrs.data());
         auto capture = testing::internal::GetCapturedStderr();
         EXPECT_FALSE(capture.find("Perf Db: record not found") != std::string::npos);
+        std::cout << capture;
     }
 };
 
