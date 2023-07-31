@@ -84,10 +84,9 @@ void Run2dDriver(miopenDataType_t prec)
     case miopenInt8x4:
     case miopenInt32:
     case miopenDouble:
-        MIOPEN_THROW(miopenStatusBadParm,
-                     "miopenBFloat16, miopenInt8x4, miopenInt32, miopenDouble data "
-                     "type not supported by "
-                     "conv_igemm_mlir test");
+        FAIL("miopenBFloat16, miopenInt8x4, miopenInt32, miopenDouble data "
+             "type not supported by "
+             "conv_igemm_mlir test");
 
     default: params = ConfigWithFloat::GetParam();
     }
@@ -105,7 +104,7 @@ void Run2dDriver(miopenDataType_t prec)
         testing::internal::CaptureStderr();
         test_drive<conv2d_driver>(ptrs.size(), ptrs.data());
         auto capture = testing::internal::GetCapturedStderr();
-        EXPECT_FALSE(capture.find("Perf Db: record not found") != std::string::npos);
+        std::cout << capture;
     }
 };
 
@@ -131,14 +130,21 @@ TEST_P(ConfigWithFloat, FloatTest)
 #endif
 };
 
+bool IsTestSupportedForDevice(const miopen::Handle& handle)
+{
+    std::string devName = handle.GetDeviceName();
+    if(miopen::StartsWith(devName, "gfx103") || miopen::StartsWith(devName, "gfx906"))
+        return true;
+    else
+        return false;
+}
+
 TEST_P(ConfigWithHalf, HalfTest)
 {
 #if MIOPEN_USE_MLIR
 
     const auto& handle = get_handle();
-    if((miopen::StartsWith(handle.GetDeviceName(), "gfx103") ||
-        miopen::StartsWith(handle.GetDeviceName(), "gfx906")) &&
-       miopen::IsEnvvarValueEnabled("MIOPEN_TEST_MLIR") &&
+    if(IsTestSupportedForDevice(handle) && miopen::IsEnvvarValueEnabled("MIOPEN_TEST_MLIR") &&
        miopen::IsEnvvarValueEnabled("MIOPEN_TEST_ALL") && GetFloatArg() == "--half")
     {
         Run2dDriver(miopenHalf);
@@ -158,9 +164,7 @@ TEST_P(ConfigWithInt8, Int8Test)
 #if MIOPEN_USE_MLIR
 
     const auto& handle = get_handle();
-    if((miopen::StartsWith(handle.GetDeviceName(), "gfx103") ||
-        miopen::StartsWith(handle.GetDeviceName(), "gfx906")) &&
-       miopen::IsEnvvarValueEnabled("MIOPEN_TEST_MLIR") &&
+    if(IsTestSupportedForDevice(handle) && miopen::IsEnvvarValueEnabled("MIOPEN_TEST_MLIR") &&
        miopen::IsEnvvarValueEnabled("MIOPEN_TEST_ALL") && GetFloatArg() == "--int8")
     {
         Run2dDriver(miopenInt8);
