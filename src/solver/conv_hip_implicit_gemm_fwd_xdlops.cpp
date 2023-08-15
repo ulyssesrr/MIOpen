@@ -80,6 +80,13 @@ struct CKArgs
         rPadding = {ProblemInterpreter::GetAdjustedInputRightPadH(problem),
                     ProblemInterpreter::GetAdjustedInputRightPadW(problem)};
     }
+
+    CKArgs(const CKArgs&) = default;
+    CKArgs(CKArgs&&) = default;
+    CKArgs& operator=(const CKArgs&) = default;
+    CKArgs& operator=(CKArgs&&) = default;
+    ~CKArgs() = default;
+
     int N;
     int K;
     int C;
@@ -185,14 +192,13 @@ bool ConvHipImplicitGemmFwdXdlops::CheckCKApplicability(const ProblemDescription
 
 namespace {
 
-template <typename DataType>
+template <typename DataType, typename CKConvPtr, typename CKInvokerPtr>
 void RunCKSolution(const Handle& handle,
                    const AnyInvokeParams& primitive_parameters,
-                   const CKArgs& ck_args,
-                   size_t config_idx)
+                   const CKConvPtr& conv_ptr,
+                   const CKInvokerPtr& invoker_ptr,
+                   const CKArgs& ck_args)
 {
-    const auto conv_ptrs = DeviceOpPtrs<DataType>::GetInstances();
-    auto& conv_ptr       = conv_ptrs.at(config_idx);
     const auto& data_ctx = primitive_parameters.CastTo<conv::DataInvokeParams>();
     const auto& tensors  = data_ctx.tensors;
     auto argument_ptr    = conv_ptr->MakeArgumentPointer(
@@ -214,7 +220,6 @@ void RunCKSolution(const Handle& handle,
         {},
         {},
         {});
-    auto invoker_ptr            = conv_ptr->MakeInvokerPointer();
     const auto enable_profiling = handle.IsProfilingEnabled();
 
     float elapsed_time =
@@ -226,40 +231,64 @@ void RunCKSolution(const Handle& handle,
     }
 }
 
+template <typename T>
+class NoClass;
+
+
+template <typename DataType>
+InvokerFactory MakeInvokerFactoryHelper(CKArgs ck_args, size_t config_idx)
+{
+    auto conv_ptrs = DeviceOpPtrs<DataType>::GetInstances();
+    auto conv_ptr       = std::move(conv_ptrs.at(config_idx));
+    auto invoker_ptr = conv_ptr->MakeInvokerPointer();
+
+        return std::move([ck_args=std::move(ck_args), conv_ptr=std::move(conv_ptr),
+               invoker_ptr=std::move(invoker_ptr)] (const std::vector<Kernel>& kernels) mutable {
+
+                 std::ignore = kernels;
+                 // return [ck_args=std::move(ck_args), conv_ptr=std::move(conv_ptr),
+                 // invoker_ptr=std::move(invoker_ptr)](const Handle& handle, const AnyInvokeParams& primitive_parameters) {
+                 return std::move([ck_args=std::move(ck_args), conv_ptr=std::move(conv_ptr), invoker_ptr=std::move(invoker_ptr)](const Handle& handle, const AnyInvokeParams& primitive_parameters) {
+
+                   RunCKSolution<DataType>(handle, primitive_parameters, conv_ptr, invoker_ptr, ck_args);
+
+                 });
+
+         });
+
+}
+
+InvokerFactory MakeInvokerFactoryThrowError() {
+  return [] (const std::vector<Kernel>& kernels) {
+    std::ignore = kernels;
+    MIOPEN_THROW(miopenStatusNotImplemented, "Convlution operation not implemented for this data type");
+    return [](const Handle&, const AnyInvokeParams&) {
+    };
+  };
+}
+
 InvokerFactory
 MakeInvokerFactoryHipImplGemmFwdXdlops(const ProblemDescription& problem,
                                        const PerformanceConfigHipImplicitGemmFwdXdlops& config)
 {
 
     auto ck_args               = CKArgs{problem};
-    miopenDataType_t data_type = problem.conv_problem.GetInDataType();
-    auto config_idx            = config.index;
+    const auto config_idx = config.index;
 
-    InvokerFactory ret =
-        [ck_args = std::move(ck_args), data_type, config_idx](const std::vector<Kernel>& kernels) {
-            std::ignore = kernels;
-            return [ck_args, data_type, config_idx](const Handle& handle,
-                                                    const AnyInvokeParams& primitive_parameters) {
-                switch(data_type)
-                {
-                case miopenInt8:
-                    RunCKSolution<int8_t>(handle, primitive_parameters, ck_args, config_idx);
-                    break;
-                case miopenHalf:
-                    RunCKSolution<ck::half_t>(handle, primitive_parameters, ck_args, config_idx);
-                    break;
-                case miopenFloat:
-                    RunCKSolution<float>(handle, primitive_parameters, ck_args, config_idx);
-                    break;
-                case miopenInt32:
-                case miopenInt8x4:
-                case miopenBFloat16:
-                case miopenDouble: break;
-                }
-            };
-        };
+    switch (problem.conv_problem.GetInDataType()) {
+      case miopenInt8:
+          return MakeInvokerFactoryHelper<int8_t>(std::move(ck_args), config_idx);
+      case miopenHalf:
+          return MakeInvokerFactoryHelper<ck::half_t>(std::move(ck_args), config_idx);
+      case miopenFloat:
+          return MakeInvokerFactoryHelper<float>(std::move(ck_args), config_idx);
+      case miopenInt32:
+      case miopenInt8x4:
+      case miopenBFloat16:
+      case miopenDouble: 
+          return MakeInvokerFactoryThrowError() ;
 
-    return ret;
+    }
 }
 
 } // namespace
