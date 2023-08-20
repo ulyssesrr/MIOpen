@@ -46,6 +46,8 @@ typedef float float_t;
 #endif
 #endif // __HIPCC_RTC__
 
+#include <array>
+
 // hcc seems need __device__ __host__ together to compile, and no extern "C"
 typedef union value_bf16_fp32_t
 {
@@ -82,6 +84,15 @@ inline __device__ __host__ ushort convert_fp32_to_bf16(float src_val)
     }
     return target_val.ushortvec[1];
 }
+
+
+
+using StrideIndexType = int;
+using Strides3D = std::array<StrideIndexType, 3>;
+using Strides4D = std::array<StrideIndexType, 4>;
+using Strides5D = std::array<StrideIndexType, 5>;
+using Strides6D = std::array<StrideIndexType, 6>;
+
 
 template <typename src_data_t, typename dst_data_t>
 inline __device__ __host__ dst_data_t cast_to(const src_data_t& val)
@@ -1022,6 +1033,132 @@ inline __device__ void naive_conv_fwd_ndhwc(const src_data_t* __restrict__ p_in,
         }
         size_t o_idx = static_cast<size_t>(iho) * wo * k + static_cast<size_t>(iwo) * k +
                        static_cast<size_t>(ik);
+        p_out[o_idx] = cast_to<acc_data_t, dst_data_t>(value);
+    }
+}
+
+// design block_size 256
+template <typename src_data_t, typename acc_data_t, typename dst_data_t>
+inline __device__ void naive_conv_fwd_ndhwc_nonpacked(const src_data_t* __restrict__ p_in,
+                                            const src_data_t* __restrict__ p_wei,
+                                            dst_data_t* __restrict__ p_out,
+                                            Strides5D in_strides,
+                                            Strides6D wei_strides,
+                                            Strides5D out_strides,
+                                            int di,
+                                            int hi,
+                                            int wi,
+                                            int n,
+                                            int k_per_group,
+                                            int c_per_group,
+                                            int do_,
+                                            int ho,
+                                            int wo,
+                                            int sz,
+                                            int sy,
+                                            int sx,
+                                            int dz,
+                                            int dy,
+                                            int dx,
+                                            int pz,
+                                            int py,
+                                            int px,
+                                            int fz,
+                                            int fy,
+                                            int fx,
+                                            int group)
+{
+    /*
+     *  need to compute total output pixel: `group * n * do_ * ho * wo *
+     * k_per_group`.
+     *  to distribute this workload, let one workgroup compute `ho * wo *
+     * k_per_group` pixel,
+     *  hence need `group * n * do_` workgroups (grid_size).
+     */
+    int k             = k_per_group * group;
+    int c             = c_per_group * group;
+    int thread_length = ho * wo * k_per_group;
+    int bid           = blockIdx.x;
+    int ido           = bid % do_;
+    int in            = (bid / do_) % n;
+    int ig            = bid / (n * do_);
+
+    //  TODO: what to do with ig * c_per-group and similarly ig * k_per_group
+    // p_in += static_cast<size_t>(in) * di * hi * wi * c + static_cast<size_t>(ig) * c_per_group;
+    // p_wei += static_cast<size_t>(ig) * k_per_group * fz * fy * fx * c_per_group;
+
+    p_in += static_cast<size_t>(in) * di * hi * wi * c + static_cast<size_t>(ig) * c_per_group;
+    // assumes that group G is the highest dimension in the layout
+    p_wei += static_cast<size_t>(ig) * wei_strides[5];
+
+    // p_out += static_cast<size_t>(in) * do_ * ho * wo * k + static_cast<size_t>(ido) * ho * wo * k +
+             // static_cast<size_t>(ig) * k_per_group;
+    p_out += static_cast<size_t>(in) * out_strides[4] + static_cast<size_t>(ido) * out_strides[3]
+      + ??;
+
+
+    for(int tid = threadIdx.x; tid < thread_length; tid += blockDim.x)
+    {
+        int ik  = tid % k_per_group;
+        int iwo = (tid / k_per_group) % wo;
+        int iho = tid / (k_per_group * wo);
+
+        double value = .0f;
+
+        for(int iz = 0; iz < fz; iz++)
+        {
+            int valid_d = 1;
+            int cur_d   = sz * ido - pz + dz * iz;
+            if(cur_d < 0 || cur_d >= di)
+                valid_d &= 0;
+            for(int iy = 0; iy < fy; iy++)
+            {
+                int valid_h = 1;
+                int cur_h   = sy * iho - py + dy * iy;
+                if(cur_h < 0 || cur_h >= hi)
+                    valid_h &= 0;
+                for(int ix = 0; ix < fx; ix++)
+                {
+                    int valid_w = 1;
+                    int cur_w   = sx * iwo - px + dx * ix;
+                    if(cur_w < 0 || cur_w >= wi)
+                        valid_w &= 0;
+                    for(int ic = 0; ic < c_per_group; ic++)
+                    {
+                        if(valid_d & valid_w & valid_h)
+                        {
+                            /*
+                            size_t i_idx = static_cast<size_t>(cur_d) * hi * wi * c +
+                                           static_cast<size_t>(cur_h) * wi * c +
+                                           static_cast<size_t>(cur_w) * c + static_cast<size_t>(ic);
+                            size_t f_idx = static_cast<size_t>(ik) * fz * fy * fx * c_per_group +
+                                           static_cast<size_t>(iz) * fy * fx * c_per_group +
+                                           static_cast<size_t>(iy) * fx * c_per_group +
+                                           static_cast<size_t>(ix) * c_per_group +
+                                           static_cast<size_t>(ic);
+                            */
+                            size_t i_idx = static_cast<size_t>(cur_d) * in_strides[3] +
+                                           static_cast<size_t>(cur_h) * in_strides[2] +
+                                           static_cast<size_t>(cur_w) * in_strides[1] + 
+                                           static_cast<size_t>(ic) * in_strides[0];
+
+                            size_t f_idx = static_cast<size_t>(ik) * wei_strides[4] +
+                                           static_cast<size_t>(iz) * wei_strides[3] +
+                                           static_cast<size_t>(iy) * wei_strides[2] +
+                                           static_cast<size_t>(ix) * wei_strides[1] +
+                                           static_cast<size_t>(ic) * wei_strides[0];
+                            
+                            value += cast_to<src_data_t, acc_data_t>(p_in[i_idx]) *
+                                     cast_to<src_data_t, acc_data_t>(p_wei[f_idx]);
+                        }
+                    }
+                }
+            }
+        }
+        // size_t o_idx = static_cast<size_t>(iho) * wo * k + static_cast<size_t>(iwo) * k +
+                       // static_cast<size_t>(ik);
+        size_t o_idx = static_cast<size_t>(iho) * out_strides[2] + static_cast<size_t>(iwo) * out_strides[1] +
+                       static_cast<size_t>(ik) * out_strides[0];
         p_out[o_idx] = cast_to<acc_data_t, dst_data_t>(value);
     }
 }
