@@ -320,6 +320,35 @@ std::vector<uint64_t> PredictSolver(const ProblemDescription& problem,
         sol.push_back(sol_id.Value());
         any_sol.push_back(sol_id.Value());
     }
+
+#if MIOPEN_WORKAROUND_ADD_CK_SOLVERS
+    auto is_naive = [&](miopen::solver::Id id) {
+        if(id == miopen::solver::Id{"ConvDirectNaiveConvFwd"})
+            return true;
+        else if(id == miopen::solver::Id{"ConvDirectNaiveConvBwd"})
+            return true;
+        else if(id == miopen::solver::Id{"ConvDirectNaiveConvWrw"})
+            return true;
+        return false;
+    };
+
+    if(sol.size() == 1 && is_naive(miopen::solver::Id(sol.at(0))))
+    {
+        std::vector<miopen::solver::Id> ck_solver_ids;
+        ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemmGroupFwdXdlops"});
+        ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemmFwdXdlops"});
+        ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemmBwdXdlops"});
+        ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemm3DGroupFwdXdlops"});
+        for(auto sol_id : ck_solver_ids)
+        {
+            if(sol_id.GetSolver().IsApplicable(ctx, problem))
+            {
+                sol.push_back(sol_id.Value());
+            }
+        }
+    }
+#endif
+
     db.StoreRecord(problem.conv_problem, any_sol);
     if(miopen::IsLogging(LoggingLevel::Info2))
     {
