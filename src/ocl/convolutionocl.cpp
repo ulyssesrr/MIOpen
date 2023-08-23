@@ -542,7 +542,7 @@ ConvolutionDescriptor::GetSolutionsFallback(const ExecutionContext& exec_ctx,
 
     auto interim = std::vector<miopenConvSolution_t>{};
     interim.reserve(maxSolutionCount); // For speed. In most cases we have less entries than asked.
-
+    std::cout<<" interim.size(): "<<interim.size()<<std::endl;
     // TunaNet Fallback
 #if MIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK
     if(!miopen::IsDisabled(MIOPEN_DEBUG_ENABLE_AI_IMMED_MODE_FALLBACK{}))
@@ -572,6 +572,44 @@ ConvolutionDescriptor::GetSolutionsFallback(const ExecutionContext& exec_ctx,
                 ++idx;
             }
         }
+#if MIOPEN_WORKAROUND_ADD_CK_SOLVERS
+        else
+        {
+            auto is_naive = [&](miopen::solver::Id id) {
+                if(id == miopen::solver::Id{"ConvDirectNaiveConvFwd"})
+                    return true;
+                else if(id == miopen::solver::Id{"ConvDirectNaiveConvBwd"})
+                    return true;
+                else if(id == miopen::solver::Id{"ConvDirectNaiveConvWrw"})
+                    return true;
+                return false;
+            };
+
+            //if(interim.size() == 1 && is_naive(miopen::solver::Id{interim.at(0).solution_id}))
+            {
+                std::vector<miopen::solver::Id> ck_solver_ids;
+                ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemmGroupFwdXdlops"});
+                ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemmFwdXdlops"});
+                ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemmBwdXdlops"});
+                ck_solver_ids.push_back(miopen::solver::Id{"ConvHipImplicitGemm3DGroupFwdXdlops"});
+                int idx = 1;
+                const auto ai_time = [](const int& idx) {
+                    return 10.0f * static_cast<float>(idx); // Assume idx == 1 (best solver) is 10 ms.
+                };
+                for(auto sol_id : ck_solver_ids)
+                {   std::cout<<" all sol_id: "<<sol_id.Value()<<std::endl;
+                    if(sol_id.GetSolver().IsApplicable(ctx, problem))
+                    {   
+                        std::cout<<" applicable sol_id: "<<sol_id.Value()<<std::endl;
+                        //sol.push_back(sol_id.Value());
+                        interim.emplace_back(miopenConvSolution_t{
+                            ai_time(idx), sol_id.GetSolver().GetWorkspaceSize(ctx, problem), sol_id.Value(), sol_id.GetAlgo()});
+                    }
+                    ++idx;
+                }
+            }
+        }
+#endif
     }
 #endif // MIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK
 
@@ -614,7 +652,7 @@ ConvolutionDescriptor::GetSolutionsFallback(const ExecutionContext& exec_ctx,
                              << ", name: " << miopen::solver::Id(s.solution_id).ToString());
     std::sort(begin(interim), end(interim), SolutionTimeComparator{});
     interim.resize(std::min(maxSolutionCount, interim.size()));
-
+    std::cout<<"interim size before return: "<<interim.size()<<std::endl;
     return interim;
 }
 
@@ -699,6 +737,12 @@ ConvolutionDescriptor::GetSolutions(const ExecutionContext& exec_ctx,
 
     if(fallbackPathTaken != nullptr)
         *fallbackPathTaken = solutions.empty();
+    
+    for(auto sol:solutions)
+    {
+        auto id = sol.solution_id;
+        std::cout<<"sol id: "<<id<<std::endl;
+    }
 
     if(!solutions.empty())
         return solutions;
