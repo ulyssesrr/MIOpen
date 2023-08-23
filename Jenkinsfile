@@ -316,8 +316,9 @@ def buildHipClangJobAndReboot(Map conf=[:]){
         throw e
     }
     finally{
-        if (conf.get("needs_gpu", true)) {
-            reboot()
+       if (conf.get("needs_gpu", true)) {
+    //        reboot()
+      println "done"
         }
     }
 }
@@ -670,6 +671,11 @@ pipeline {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Int8_flags, build_install: "true")
                            }
                         }
+                        stage('reboot node') {
+                         steps {
+                             reboot()
+                            }
+                        }
                     }
                 }
                 stage(' All Hip Datatypes On gfx908') {
@@ -714,6 +720,11 @@ pipeline {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Int8_flags, build_install: "true")
                            }
                         }
+                        stage('reboot node') {
+                         steps {
+                             reboot()
+                            }
+                        }                        
                     }
                 }
                 stage(' All Hip Datatypes On gfx1030') {
@@ -758,6 +769,11 @@ pipeline {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Int8_flags, build_install: "true")
                            }
                         }
+                        stage('reboot node') {
+                         steps {
+                             reboot()
+                            }
+                        }                        
                     }
                 }
                 // stage('Fp32 Hip All gfx90a Xnack+') {
@@ -812,6 +828,11 @@ pipeline {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Int8_flags, build_install: "true")
                            }
                         }
+                        stage('reboot node') {
+                         steps {
+                             reboot()
+                            }
+                        }                            
                     }
                 }
                 stage(' All Hip Datatypes On gfx1100') {
@@ -856,6 +877,11 @@ pipeline {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Int8_flags, build_install: "true")
                            }
                         }
+                        stage('reboot node') {
+                         steps {
+                             reboot()
+                            }
+                        }                        
                     }
                 }
             }
