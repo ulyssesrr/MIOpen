@@ -265,15 +265,12 @@ std::vector<uint64_t> PredictSolver(const ProblemDescription& problem,
                                     const ConvolutionContext& ctx,
                                     const std::string& device)
 {
-    std::cout<<"inside predict solver"<<std::endl;
     const static std::unique_ptr<Model> model = GetModel(device);
     if(!model || !model->IsProblemSupported(problem, ctx))
         return {};
-    std::cout<<"probem supported"<<std::endl;
     std::string est_name = ":memory:" + device;
     auto& db             = AnyRamDb::GetCached(est_name);
     auto db_res          = db.FindRecord(problem.conv_problem);
-    std::cout<<"123456789"<<std::endl;
     if(db_res)
     {
         MIOPEN_LOG_I2("Cached heuristic result found");
@@ -291,8 +288,6 @@ std::vector<uint64_t> PredictSolver(const ProblemDescription& problem,
         }
         return db_sol;
     }
-
-    std::cout<<"12345"<<std::endl;
 
     MIOPEN_LOG_I2("Evaluating Heuristic");
 
