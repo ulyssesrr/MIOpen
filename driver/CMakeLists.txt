@@ -23,7 +23,6 @@
 # SOFTWARE.
 # 
 ################################################################################
-cmake_minimum_required( VERSION 3.5)
 
 add_executable(MIOpenDriver main.cpp InputFlags.cpp)
 target_link_libraries(MIOpenDriver MIOpen Threads::Threads)
