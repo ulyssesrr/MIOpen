@@ -762,13 +762,6 @@ endif()
 
 target_link_libraries(MIOpen PRIVATE nlohmann_json::nlohmann_json)
 
-if(WIN32 AND NOT MSVC)
-    if(BUILD_DEV)
-        target_link_libraries(MIOpen PUBLIC -Wl,-export-all-symbols -Wl,-exclude-symbols=_Unwind_Resume)
-    endif()
-    target_link_libraries(MIOpen PUBLIC -Wl,--whole-archive -lgcc -lstdc++-6 -Wl,--no-whole-archive -Wl,--allow-multiple-definition)
-endif()
-
 target_internal_library(MIOpen
     Boost::filesystem
 )
