@@ -635,6 +635,7 @@ pipeline {
                         expression { params.TARGET_VEGA20 }
                     }
                     options {
+                        timeout(time: 600, unit: 'MINUTES')
                         retry(2)
                     }
                     agent{ label rocmnode("vega20") }
@@ -684,6 +685,7 @@ pipeline {
                         expression { params.TARGET_GFX908 }
                     }
                     options {
+                        timeout(time: 600, unit: 'MINUTES')
                         retry(2)
                     }
                     agent{ label rocmnode("gfx908") }
@@ -692,6 +694,10 @@ pipeline {
                          when {
                             expression { params.DATATYPE_FP16 }
                          }
+                          options {
+                             timeout(time: 600, unit: 'MINUTES')
+                             retry(2)
+                            }
                          steps {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Fp16_flags, build_install: "true")
                            }
@@ -700,6 +706,10 @@ pipeline {
                          when {
                             expression { params.DATATYPE_FP32 }
                          }
+                          options {
+                             timeout(time: 600, unit: 'MINUTES')
+                             retry(2)
+                            }                         
                          steps {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Fp32_flags, build_install: "true")
                            }
@@ -708,6 +718,10 @@ pipeline {
                          when {
                             expression { params.DATATYPE_BF16 }
                          }
+                          options {
+                             timeout(time: 600, unit: 'MINUTES')
+                             retry(2)
+                            }                        
                          steps {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Bf16_flags, build_install: "true")
                            }
@@ -716,6 +730,10 @@ pipeline {
                          when {
                             expression { params.DATATYPE_INT8 }
                          }
+                          options {
+                             timeout(time: 600, unit: 'MINUTES')
+                             retry(2)
+                            }                         
                          steps {
                              buildHipClangJobAndReboot(build_type: 'debug', setup_flags: Full_test + Int8_flags, build_install: "true")
                            }
