@@ -60,6 +60,10 @@ endif()
 
 project ( MIOpen C CXX )
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 include(CTest)
 
 find_package(Threads REQUIRED)
@@ -111,11 +115,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         message(FATAL_ERROR "MIOpen requires at least gcc 5.3")
     endif()
 endif()
-
-
-############################################################
-# require C++14
-add_compile_options(-std=c++17)
 
 ############################################################
 # OPTION - MIOpen Backend
