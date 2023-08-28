@@ -35,6 +35,7 @@ target_compile_options(sqlite_memvfs PRIVATE
         $<$<CXX_COMPILER_ID:GNU>:-w>)
 
 target_include_directories(sqlite_memvfs SYSTEM PRIVATE ${SQLITE3_STATIC_INCLUDE_DIRS})
+target_link_libraries(sqlite_memvfs PRIVATE ${SQLITE3_STATIC_LDFLAGS})
 # set_target_properties(
 #     sqlite_memvfs
 #     PROPERTIES

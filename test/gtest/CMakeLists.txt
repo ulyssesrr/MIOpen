@@ -22,13 +22,17 @@ function(add_gtest TEST_NAME)
       target_include_directories(test_${TEST_NAME} SYSTEM PRIVATE $<BUILD_INTERFACE:${FDEEP_INCLUDE_DIR}>)
       target_include_directories(test_${TEST_NAME} SYSTEM PRIVATE $<BUILD_INTERFACE:${EIGEN_INCLUDE_DIR}/eigen3>)
     endif()
-    target_link_libraries(test_${TEST_NAME} gtest gtest_main MIOpen ${Boost_LIBRARIES} hip::host $<BUILD_INTERFACE:roc::rocblas>)
-    if(NOT MIOPEN_EMBED_DB STREQUAL "")
-        target_link_libraries(test_${TEST_NAME} $<BUILD_INTERFACE:miopen_data>)
+    target_link_libraries(test_${TEST_NAME} gtest gtest_main MIOpen MIOpenCore hip::host nlohmann_json::nlohmann_json ${BZIP2_LIBRARIES})
+    if(rocBLAS_FOUND)
+      target_link_libraries(test_${TEST_NAME} PRIVATE roc::rocblas)
     endif()
-    # Enable CMake to discover the test binary
-    gtest_discover_tests(test_${TEST_NAME} PROPERTIES ENVIRONMENT "MIOPEN_USER_DB_PATH=${CMAKE_CURRENT_BINARY_DIR};MIOPEN_TEST_ALL=${MIOPEN_TEST_ALL};MIOPEN_TEST_MLIR=${MIOPEN_TEST_MLIR};MIOPEN_TEST_COMPOSABLEKERNEL=${MIOPEN_TEST_COMPOSABLEKERNEL}")
-
+    if(NOT MIOPEN_EMBED_DB STREQUAL "")
+      target_link_libraries(test_${TEST_NAME} PRIVATE miopen_data)
+    endif()
+    if(NOT WIN32) # TODO: enable on Windows!
+      # Enable CMake to discover the test binary
+      gtest_discover_tests(test_${TEST_NAME} PROPERTIES ENVIRONMENT "MIOPEN_USER_DB_PATH=${CMAKE_CURRENT_BINARY_DIR};MIOPEN_TEST_ALL=${MIOPEN_TEST_ALL};MIOPEN_TEST_MLIR=${MIOPEN_TEST_MLIR};MIOPEN_TEST_COMPOSABLEKERNEL=${MIOPEN_TEST_COMPOSABLEKERNEL}")
+    endif()
   endif()
 endfunction()
 

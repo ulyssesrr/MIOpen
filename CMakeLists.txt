@@ -85,14 +85,22 @@ set(MIOPEN_ENABLE_SQLITE_KERN_CACHE On CACHE BOOL "")
 
 # By default build shared libraries
 option(BUILD_SHARED_LIBS "Create shared libraries" ON)
+option(Boost_USE_STATIC_LIBS "Use boost static libraries" ON)
 
-if(MIOPEN_ENABLE_SQLITE)
-    # MIOpen now depends on SQLite as well
-    find_package(PkgConfig)
-    pkg_check_modules(SQLITE3 REQUIRED sqlite3)
+if(WIN32)
+    add_subdirectory(extern)
+else()
+    if(MIOPEN_ENABLE_SQLITE)
+        # MIOpen now depends on SQLite as well
+        find_package(PkgConfig)
+        pkg_check_modules(SQLITE3 REQUIRED sqlite3)
+    endif()
+    find_package(BZip2)
+    find_package(nlohmann_json 3.9.1 REQUIRED)
+    add_definitions(-DBOOST_ALL_NO_LIB=1)
+    find_package(Boost 1.74 REQUIRED COMPONENTS filesystem system)
 endif()
-find_package(BZip2)
-find_package(nlohmann_json 3.9.1 REQUIRED)
+
 if(MIOPEN_ENABLE_SQLITE_KERN_CACHE AND NOT MIOPEN_ENABLE_SQLITE)
     message(FATAL_ERROR "MIOPEN_ENABLE_SQLITE_KERN_CACHE requires MIOPEN_ENABLE_SQLITE")
 endif()
@@ -260,6 +268,11 @@ message(STATUS "Hip compiler flags: ${HIP_COMPILER_FLAGS}")
 
 add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:HIP_COMPILER_FLAGS="${HIP_COMPILER_FLAGS}">)
 
+if(WIN32)
+    add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:_MBCS WIN32 WIN32_LEAN_AND_MEAN NOMINMAX
+            _CRT_SECURE_NO_WARNINGS _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING _WINDOWS
+            _WIN32_WINNT=0x0601 BOOST_USE_WINDOWS_H>)
+endif()
 
 # HIP
 if( MIOPEN_BACKEND STREQUAL "HIP" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN_BACKEND STREQUAL "HIPNOGPU")
@@ -307,7 +320,7 @@ endif()
 message( STATUS "${MIOPEN_BACKEND} backend selected." )
 
 # look for and register clang-offload-bundler
-if(MIOPEN_HIP_COMPILER MATCHES ".*clang\\+\\+$")
+if(MIOPEN_HIP_COMPILER MATCHES ".*clang\\+\\+.*")
     find_program(MIOPEN_OFFLOADBUNDLER_BIN clang-offload-bundler
         PATH_SUFFIXES bin
         PATHS
@@ -329,9 +342,14 @@ if(MIOPEN_USE_MLIR)
     if(NOT ${BUILD_SHARED_LIBS} AND ${MIOPEN_USE_COMGR})
         message(FATAL_ERROR "Potential symbol conflict between mlir and comgr in static build")
     endif()
-    # Try to find package rocMLIR
-    # REQUIRED is omitted since we do not want cmake to abort if the package is not found
-    find_package(rocMLIR 1.0.0 CONFIG)
+    if(WIN32)
+        # Windows does not support earlier ROCm versions hence no fallback to MLIRMIOpen.
+        find_package(rocMLIR 1.0.0 CONFIG REQUIRED)
+    else()
+        # Try to find package rocMLIR
+        # REQUIRED is omitted since we do not want cmake to abort if the package is not found
+        find_package(rocMLIR 1.0.0 CONFIG)
+    endif()
     if(NOT rocMLIR_FOUND)
         message(STATUS "Falling back to find library libMLIRMIOpen")
         # Backward compatibility with ROCm 5.3
@@ -374,17 +392,16 @@ endif()
 if(MIOPEN_USE_HIPRTC)
     if(NOT MIOPEN_USE_COMGR)
         message(FATAL_ERROR "HIPRTC can be used only together with COMGR")
-    else()
-        message(STATUS "Build with HIPRTC")
     endif()
+    if(WIN32)
+        find_package(hiprtc REQUIRED)
+    endif()
+    message(STATUS "Build with HIPRTC")
 endif()
 
-option(Boost_USE_STATIC_LIBS "Use boost static libraries" ON)
-set(BOOST_COMPONENTS filesystem)
-add_definitions(-DBOOST_ALL_NO_LIB=1)
-find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
-
-find_path(HALF_INCLUDE_DIR half/half.hpp)
+if(NOT WIN32)
+    find_path(HALF_INCLUDE_DIR half/half.hpp)
+endif()
 message(STATUS "HALF_INCLUDE_DIR: ${HALF_INCLUDE_DIR}")
 
 option( MIOPEN_DEBUG_FIND_DB_CACHING "Use system find-db caching" ON)

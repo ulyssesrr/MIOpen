@@ -636,10 +636,20 @@ endif()
 
 add_library(MIOpenCore STATIC ${MIOpen_Source})
 
+if(WIN32 AND (CMAKE_CXX_COMPILER MATCHES ".*clang\\+\\+" OR CMAKE_C_COMPILER MATCHES ".*clang"))
+    # Refer to https://en.cppreference.com/w/cpp/language/types for details.
+    target_compile_options(MIOpenCore PRIVATE -U__LP64__)
+endif()
+
 target_link_libraries(MIOpenCore PUBLIC nlohmann_json::nlohmann_json Boost::filesystem)
 target_include_directories(MIOpenCore SYSTEM PUBLIC $<BUILD_INTERFACE:${HALF_INCLUDE_DIR}>)
 target_include_directories(MIOpenCore SYSTEM PRIVATE ${BZIP2_INCLUDE_DIR})
 target_include_directories(MIOpenCore PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src/include ${CMAKE_BINARY_DIR}/include)
+
+if(WIN32)
+    target_link_libraries(MIOpenCore PUBLIC Boost::any Boost::container Boost::date_time Boost::hof
+            Boost::interprocess Boost::range Boost::thread Boost::variant)
+endif()
 
 set_target_properties(MIOpenCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -679,6 +689,11 @@ function(target_internal_library TARGET)
     target_link_libraries(${TARGET} INTERFACE $<BUILD_INTERFACE:${ARGN}>)
 endfunction()
 
+if(WIN32)
+    target_internal_library(MIOpen Boost::any Boost::container Boost::date_time Boost::hof
+	    Boost::interprocess Boost::range Boost::thread Boost::variant)
+endif()
+
 target_include_directories(MIOpen PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/include>
 )
@@ -689,9 +704,16 @@ endif()
 
 target_include_directories(MIOpen SYSTEM PUBLIC $<BUILD_INTERFACE:${HALF_INCLUDE_DIR}>)
 target_include_directories(MIOpen SYSTEM PRIVATE ${BZIP2_INCLUDE_DIR})
+
+if(WIN32 AND (CMAKE_CXX_COMPILER MATCHES ".*clang\\+\\+" OR CMAKE_C_COMPILER MATCHES ".*clang"))
+    # Refet to https://en.cppreference.com/w/cpp/language/types for details.
+    target_compile_options(MIOpen PUBLIC $<BUILD_INTERFACE:-U__LP64__>)
+endif()
+
 # Workaround : change in rocm-cmake was causing linking error so had to add ${CMAKE_DL_LIBS} 
 #               We can remove ${CMAKE_DL_LIBS} once root cause is identified.
 target_link_libraries(MIOpen PRIVATE ${CMAKE_DL_LIBS} Threads::Threads ${BZIP2_LIBRARIES} ${MIOPEN_CK_LINK_FLAGS})
+
 miopen_generate_export_header(MIOpen)
 
 if(MIOPEN_ENABLE_AI_KERNEL_TUNING OR MIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK)
@@ -766,11 +788,13 @@ if(rocblas_FOUND)
     list(APPEND PACKAGE_STATIC_DEPENDS PACKAGE rocblas)
 endif()
 
-# For backward compatibility with ROCm 5.3
-# Build with library libMLIRMIOpen
-if(LIBMLIRMIOPEN)
-    target_link_libraries(MIOpenCore PRIVATE ${LIBMLIRMIOPEN})
-    target_link_libraries(MIOpen PRIVATE ${LIBMLIRMIOPEN})
+if(NOT WIN32)
+    # For backward compatibility with ROCm 5.3
+    # Build with library libMLIRMIOpen
+    if(LIBMLIRMIOPEN)
+        target_link_libraries(MIOpenCore PRIVATE ${LIBMLIRMIOPEN})
+        target_link_libraries(MIOpen PRIVATE ${LIBMLIRMIOPEN})
+    endif()
 endif()
 
 # Build with package rocMLIR
