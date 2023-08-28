@@ -52,6 +52,7 @@ project ( MIOpen C CXX )
 
 include(CTest)
 
+find_package(Threads REQUIRED)
 find_package(ROCM 0.7.3 REQUIRED PATHS /opt/rocm)
 
 include(ROCMInstallTargets)
