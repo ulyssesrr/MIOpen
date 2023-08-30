@@ -103,6 +103,14 @@ Kernel KernelCache::AddKernel(const Handle& h,
                               bool is_kernel_miopengemm_str,
                               const std::string& kernel_src)
 {
+    for(size_t dim_id = 0; dim_id < vgd.size(); dim_id++)
+        if(vgd[dim_id] % vld[dim_id] != 0)
+        {
+            MIOPEN_THROW(miopenStatusInternalError,
+                         " Non uniform grid size. failed algorithm:" + algorithm +
+                             ", kernel name:" + kernel_name + ", used config:" + network_config);
+        }
+
     const std::pair<std::string, std::string> key = std::make_pair(algorithm, network_config);
     if(!network_config.empty() || !algorithm.empty()) // Don't log only _empty_ keys.
         MIOPEN_LOG_I2("Key: " << key.first << " \"" << key.second << '\"');

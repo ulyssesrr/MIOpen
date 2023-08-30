@@ -188,6 +188,14 @@ struct HIPOCKernel
     {
         assert(!local_dims.empty() && local_dims.size() <= 3);
         assert(!global_dims.empty() && global_dims.size() <= 3);
+        
+        for(size_t dim_id = 0; dim_id < global_dims.size(); dim_id++)
+            if(global_dims[dim_id] % local_dims[dim_id] != 0)
+            {
+                MIOPEN_THROW(miopenStatusInternalError,
+                             "Non uniform grid size. kernel name:" + kernel_name);
+            }
+
         ldims.fill(1);
         gdims.fill(1);
         std::copy(local_dims.begin(), local_dims.end(), ldims.begin());
