@@ -264,15 +264,13 @@ if(${MIOPEN_hip_VERSION} VERSION_GREATER_EQUAL 5.7.23302)
     string(APPEND HIP_COMPILER_FLAGS " -fno-offload-uniform-block ")
 endif()
 
+if(WIN32)
+    string(REPLACE "\\" "/" HIP_COMPILER_FLAGS "${HIP_COMPILER_FLAGS}")
+endif()
+
 message(STATUS "Hip compiler flags: ${HIP_COMPILER_FLAGS}")
 
 add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:HIP_COMPILER_FLAGS="${HIP_COMPILER_FLAGS}">)
-
-if(WIN32)
-    add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:_MBCS WIN32 WIN32_LEAN_AND_MEAN NOMINMAX
-            _CRT_SECURE_NO_WARNINGS _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING _WINDOWS
-            _WIN32_WINNT=0x0601 BOOST_USE_WINDOWS_H>)
-endif()
 
 # HIP
 if( MIOPEN_BACKEND STREQUAL "HIP" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN_BACKEND STREQUAL "HIPNOGPU")
@@ -422,9 +420,9 @@ if(BUILD_DEV)
 else()
     set(MIOPEN_BUILD_DEV 0)
     if(WIN32)
-        set(MIOPEN_USER_DB_PATH "$HOME\\.miopen\\db\\" CACHE STRING "Default path to user db files")
-        set(MIOPEN_CACHE_DIR "$HOME\\.miopen\\cache\\" CACHE STRING "")
-	set(MIOPEN_SYSTEM_DB_PATH "C:\\ProgramData\\MIOpen\\" CACHE PATH "Default path to system db files")
+        set(MIOPEN_USER_DB_PATH "$HOME\\\\.miopen\\\\db" CACHE STRING "Default path to user db files")
+        set(MIOPEN_CACHE_DIR "$HOME\\\\.miopen\\\\cache" CACHE STRING "")
+	set(MIOPEN_SYSTEM_DB_PATH "C:\\\\ProgramData\\\\MIOpen" CACHE PATH "Default path to system db files")
     else()
         set(MIOPEN_USER_DB_PATH "~/.config/miopen/" CACHE STRING "Default path of user db files")
         set(MIOPEN_CACHE_DIR "~/.cache/miopen/" CACHE STRING "")

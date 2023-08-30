@@ -49,6 +49,10 @@
 #include <thread>
 #include <vector>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace miopen {
 namespace tests {
 
@@ -962,7 +966,7 @@ public:
                           "Testing " << ArgsHelper::db_class::Get<TDb>()
                                      << " for multiprocess write access...");
 
-#if defined(WIN32)
+#ifdef _WIN32
         using PROCESS_HANDLE = PROCESS_INFORMATION;
 #else
         using PROCESS_HANDLE = FILE*;
@@ -994,7 +998,7 @@ public:
                 if(full_set())
                     command += " --all";
 
-#if defined(WIN32)
+#ifdef _WIN32
                 STARTUPINFO info;
                 PROCESS_INFORMATION processInfo;
 
@@ -1026,7 +1030,7 @@ public:
         MIOPEN_LOG_CUSTOM(LoggingLevel::Default, "Test", "Waiting for test processes...");
         for(auto child : children)
         {
-#if defined(WIN32)
+#ifdef _WIN32
             WaitForSingleObject(child.hProcess, INFINITE);
 
             DWORD status{};
@@ -1088,7 +1092,7 @@ public:
                           "Testing " << ArgsHelper::db_class::Get<TDb>()
                                      << " for multiprocess read access...");
 
-#if defined(WIN32)
+#ifdef _WIN32
         using PROCESS_HANDLE = PROCESS_INFORMATION;
 #else
         using PROCESS_HANDLE = FILE*;
@@ -1123,7 +1127,7 @@ public:
                     command += " --all";
 
                 MIOPEN_LOG_CUSTOM(LoggingLevel::Default, "Test", command);
-#if defined(WIN32)
+#ifdef _WIN32 
                 STARTUPINFO info;
                 PROCESS_INFORMATION processInfo;
 
@@ -1155,7 +1159,7 @@ public:
         MIOPEN_LOG_CUSTOM(LoggingLevel::Default, "Test", "Waiting for test processes...");
         for(auto child : children)
         {
-#if defined(WIN32)
+#ifdef _WIN32
             WaitForSingleObject(child.hProcess, INFINITE);
 
             DWORD status{};

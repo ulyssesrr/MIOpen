@@ -49,6 +49,10 @@
 #include <thread>
 #include <vector>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace miopen {
 namespace tests {
 static boost::filesystem::path& exe_path()
@@ -825,7 +829,7 @@ public:
 
         ResetDb();
 
-#if defined(WIN32)
+#ifdef _WIN32
         using PROCESS_HANDLE = PROCESS_INFORMATION;
 #else
         using PROCESS_HANDLE = FILE*;
@@ -854,7 +858,7 @@ public:
 
                 if(full_set())
                     command += " --all";
-#if defined(WIN32)
+#ifdef _WIN32
                 STARTUPINFO info;
                 PROCESS_INFORMATION processInfo;
 
@@ -886,7 +890,7 @@ public:
         std::cout << "Waiting for test processes..." << std::endl;
         for(auto child : children)
         {
-#if defined(WIN32)
+#ifdef _WIN32
             WaitForSingleObject(child.hProcess, INFINITE);
 
             DWORD status{};
@@ -943,7 +947,7 @@ public:
     {
         std::cout << "Testing db for multiprocess read access..." << std::endl;
 
-#if defined(WIN32)
+#ifdef _WIN32
         using PROCESS_HANDLE = PROCESS_INFORMATION;
 #else
         using PROCESS_HANDLE = FILE*;
@@ -977,7 +981,7 @@ public:
                     command += " --all";
 
                 std::cout << command << std::endl;
-#if defined(WIN32)
+#ifdef _WIN32
                 STARTUPINFO info;
                 PROCESS_INFORMATION processInfo;
 
@@ -1009,7 +1013,7 @@ public:
         std::cout << "Waiting for test processes..." << std::endl;
         for(auto child : children)
         {
-#if defined(WIN32)
+#ifdef _WIN32
             WaitForSingleObject(child.hProcess, INFINITE);
 
             DWORD status{};

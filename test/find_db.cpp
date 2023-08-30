@@ -37,7 +37,7 @@
 #include <miopen/hip_build_utils.hpp>
 
 #include <chrono>
-#if defined(WIN32)
+#ifdef _WIN32
 #include <Windows.h>
 #else
 #include <cstdlib>
@@ -236,7 +236,7 @@ private:
 
 int main(int argc, const char* argv[])
 {
-#if defined(WIN32)
+#if defined(_WIN32)
     SetEnvironmentVariable("MIOPEN_LOG_LEVEL", "6");
     SetEnvironmentVariable("MIOPEN_COMPILE_PARALLEL_LEVEL", "1");
     SetEnvironmentVariable("MIOPEN_ENABLE_LOGGING_ELAPSED_TIME", "1");

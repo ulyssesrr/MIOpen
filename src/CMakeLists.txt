@@ -636,9 +636,9 @@ endif()
 
 add_library(MIOpenCore STATIC ${MIOpen_Source})
 
-if(WIN32 AND (CMAKE_CXX_COMPILER MATCHES ".*clang\\+\\+" OR CMAKE_C_COMPILER MATCHES ".*clang"))
+if(WIN32)
     # Refer to https://en.cppreference.com/w/cpp/language/types for details.
-    target_compile_options(MIOpenCore PRIVATE -U__LP64__)
+    target_compile_options(MIOpenCore PUBLIC $<BUILD_INTERFACE:$<$<CXX_COMPILER_ID:Clang>:-U__LP64__>>)
 endif()
 
 target_link_libraries(MIOpenCore PUBLIC nlohmann_json::nlohmann_json Boost::filesystem)
@@ -705,11 +705,6 @@ endif()
 target_include_directories(MIOpen SYSTEM PUBLIC $<BUILD_INTERFACE:${HALF_INCLUDE_DIR}>)
 target_include_directories(MIOpen SYSTEM PRIVATE ${BZIP2_INCLUDE_DIR})
 
-if(WIN32 AND (CMAKE_CXX_COMPILER MATCHES ".*clang\\+\\+" OR CMAKE_C_COMPILER MATCHES ".*clang"))
-    # Refet to https://en.cppreference.com/w/cpp/language/types for details.
-    target_compile_options(MIOpen PUBLIC $<BUILD_INTERFACE:-U__LP64__>)
-endif()
-
 # Workaround : change in rocm-cmake was causing linking error so had to add ${CMAKE_DL_LIBS} 
 #               We can remove ${CMAKE_DL_LIBS} once root cause is identified.
 target_link_libraries(MIOpen PRIVATE ${CMAKE_DL_LIBS} Threads::Threads ${BZIP2_LIBRARIES} ${MIOPEN_CK_LINK_FLAGS})
@@ -763,6 +758,7 @@ if( MIOPEN_BACKEND STREQUAL "OpenCL")
 elseif(MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN_BACKEND STREQUAL "HIP")
     if(MIOPEN_USE_HIPRTC AND WIN32)
         target_link_libraries( MIOpenCore PUBLIC hiprtc::hiprtc )
+        target_link_libraries( MIOpen PRIVATE hiprtc::hiprtc )
     endif()
     target_link_libraries( MIOpen INTERFACE hip::host )
     target_link_libraries( MIOpenCore PUBLIC hip::device hip::host )
