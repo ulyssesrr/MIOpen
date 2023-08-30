@@ -11,7 +11,9 @@
 typedef signed char int8_t;
 typedef signed short int16_t;
 typedef float float_t;
+#if !defined(_WIN32)
 #include <limits> // std::numeric_limits
+#endif
 
 #else
 #include <cstdint> // int8_t, int16_t
