@@ -108,8 +108,6 @@ void ChangeDataPadding(const std::vector<Tgpu>& src_array,
     }
 }
 
-
-
 inline int sumvc(const std::vector<int>& x) { return std::accumulate(x.begin(), x.end(), 0); }
 
 template <typename T>
@@ -308,4 +306,3 @@ void RNN_mm_cpu(const Dtype* a_ptr,
 #endif
     }
 }
-

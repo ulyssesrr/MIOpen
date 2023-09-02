@@ -24,12 +24,10 @@
  *
  *******************************************************************************/
 
-
 #include "driver.hpp"
 #include "../driver/mloConvHost.hpp"
 #include "../driver/rnn_seq_driver.hpp"
 #include "../driver/InputFlags.cpp"
-
 
 template <class T>
 struct rnn_seq_driver : test_driver
@@ -49,25 +47,25 @@ struct rnn_seq_driver : test_driver
     int io_layout{};
 
     // Null pointer input
-    bool nohx          = false;
-    bool nodhy         = false;
-    bool nocx          = false;
-    bool nodcy         = false;
-    bool nohy          = false;
-    bool nodhx         = false;
-    bool nocy          = false;
-    bool nodcx         = false;
+    bool nohx  = false;
+    bool nodhy = false;
+    bool nocx  = false;
+    bool nodcy = false;
+    bool nohy  = false;
+    bool nodhx = false;
+    bool nocy  = false;
+    bool nodcx = false;
 
     rnn_seq_driver()
     {
         std::vector<int> modes(2, 0);
         modes[1] = 1;
 
-        std::vector<int> defaultBS{1,7};
+        std::vector<int> defaultBS{1, 7};
 
         this->add(this->inVecLen, "vector-len", this->generate_data(std::vector<int>{1, 17}, 17));
         this->add(this->hiddenSize, "hidden-size", this->generate_data({17, 1, 37}, 37));
-        this->add(this->numLayers, "num-layers", this->generate_data({1, 7},7));
+        this->add(this->numLayers, "num-layers", this->generate_data({1, 7}, 7));
         this->add(this->useDropout, "use-dropout", this->generate_data({0, 1}));
 
         this->add(this->inputMode, "in-mode", this->generate_data(modes));
@@ -86,7 +84,7 @@ struct rnn_seq_driver : test_driver
                       {4, 3, 2, 1},
                       {1, 15, 20, 15, 20, 1},
                       {},
-                      }));
+                  }));
     }
 
     int call_test_rnn_seq_api(Driver* drv, int argc, char* argv[])
@@ -131,16 +129,17 @@ struct rnn_seq_driver : test_driver
         return cumulative_rc;
     }
 
-    std::vector<std::string> prepare_strings_for_api_test() { 
+    std::vector<std::string> prepare_strings_for_api_test()
+    {
         std::vector<std::string> params;
         switch(this->type)
         {
         case miopenHalf: params.push_back("rnn_seqfp16"); break;
         case miopenFloat: params.push_back("rnn_seq"); break;
-        case miopenDouble: 
-        case miopenDataType_t::miopenBFloat16: 
-        case miopenDataType_t::miopenInt32: 
-        case miopenDataType_t::miopenInt8: 
+        case miopenDouble:
+        case miopenDataType_t::miopenBFloat16:
+        case miopenDataType_t::miopenInt32:
+        case miopenDataType_t::miopenInt8:
         case miopenDataType_t::miopenInt8x4:
         default: return {};
         }
@@ -167,7 +166,7 @@ struct rnn_seq_driver : test_driver
         {
             if(*std::max_element(seqLenArray.begin(), seqLenArray.end()) != seqLength ||
                (io_layout == 1 &&
-                !std::is_sorted(seqLenArray.begin(), seqLenArray.end(), std::greater{})) ||
+                !std::is_sorted(seqLenArray.begin(), seqLenArray.end(), std::greater<int>())) ||
                seqLenArray.size() != batchSize)
                 return {};
 
@@ -178,7 +177,7 @@ struct rnn_seq_driver : test_driver
                 std::to_string(seqLenArray[0]),
                 [](std::string a, int b) { return std::move(a) + ',' + std::to_string(b); }));
         }
-        
+
         if(inputMode == 1 && hiddenSize != inVecLen)
             return {};
 
@@ -206,7 +205,7 @@ struct rnn_seq_driver : test_driver
             params.push_back("--verify");
             params.push_back("0");
         }
-        
+
         return params;
     }
     std::vector<char*> convert_to_argv(std::vector<std::string>& strs)
@@ -230,10 +229,11 @@ struct rnn_seq_driver : test_driver
         std::cout << std::endl;
     }
 
-    void run() {
-        
+    void run()
+    {
+
         auto params = prepare_strings_for_api_test();
-        
+
         if(params.empty())
             return;
 
@@ -244,7 +244,7 @@ struct rnn_seq_driver : test_driver
             drv = new RNNSeqDriver<float, double>();
         else
             drv = new RNNSeqDriver<float16, double>();
-        
+
         int rc;
         try
         {
@@ -262,12 +262,9 @@ struct rnn_seq_driver : test_driver
             std::cout << ex.what() << std::endl;
             std::abort();
         }
-        
+
         drv->~Driver();
     }
 };
 
-int main(int argc, const char* argv[])
-{
-    test_drive<rnn_seq_driver>(argc, argv);
-}
+int main(int argc, const char* argv[]) { test_drive<rnn_seq_driver>(argc, argv); }

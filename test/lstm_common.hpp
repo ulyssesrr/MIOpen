@@ -1517,15 +1517,8 @@ struct lstm_basic_driver : test_driver
         {
             std::cout << "Empty batch sequence. Filling uniformly with batch size: " << batchSize
                       << std::endl;
-            if(flatBatchFill)
-            {
-                batchSeq.clear();
-                batchSeq.resize(seqLength, batchSize);
-            }
-            else
-            {
-                batchSeq = generate_batchSeq(batchSize, seqLength)[0];
-            }
+            batchSeq.clear();
+            batchSeq.resize(seqLength, batchSize);
         }
 
         if(batchSeq.size() != seqLength)

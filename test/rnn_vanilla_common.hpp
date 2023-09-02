@@ -48,6 +48,7 @@
 #include <miopen/tensor.hpp>
 #include <utility>
 #include <cfloat>
+#include "rnn_configs.hpp"
 
 #define MIO_RNN_TEST_DEBUG 0
 #define MIO_RNN_TIME_EVERYTHING 0
