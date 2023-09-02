@@ -25,6 +25,7 @@
  *******************************************************************************/
 
 #include "lstm_common.hpp"
+#include "rnn_configs.hpp"
 
 template <class T>
 struct lstm_driver : lstm_basic_driver<T>

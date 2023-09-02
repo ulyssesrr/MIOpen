@@ -973,11 +973,11 @@ int RNNSeqDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
             fill_array_via_gen(dcy, hid_sz, 0.0, 1.0 * scale);
     }
 
-    if(inflags.GetValueInt("dump_output"))
-    {
-        dumpBufferToFile("dump_in.bin", in.data(), in_host_sz);
-        dumpBufferToFile("dump_wei.bin", wei.data(), wei_sz);
-    }
+    //if(inflags.GetValueInt("dump_output"))
+    //{
+    //    dumpBufferToFile("dump_in.bin", in.data(), in_host_sz);
+    //    dumpBufferToFile("dump_wei.bin", wei.data(), wei_sz);
+    //}
 
     const std::vector<int> hid_len = GetHiddenTensorLengthsFromCmdLine();
     if(io_layout != miopenRNNDataSeqMajorNotPadded)
@@ -1485,10 +1485,10 @@ int RNNSeqDriver<Tgpu, Tref>::RunForwardCPU()
         printf("illegal RNN mode");
     }
 
-    if(inflags.GetValueInt("dump_output"))
-    {
-        dumpBufferToFile("dump_fwd_out_cpu.bin", outhost.data(), outhost.size());
-    }
+    //if(inflags.GetValueInt("dump_output"))
+    //{
+    //    dumpBufferToFile("dump_fwd_out_cpu.bin", outhost.data(), outhost.size());
+    //}
 
     //    TrySaveVerificationCache("fwd_out", outhost);
     return miopenStatusSuccess;
@@ -1615,10 +1615,10 @@ int RNNSeqDriver<Tgpu, Tref>::RunBackwardWeightsCPU()
         printf("illegal RNN mode");
     }
 
-    if(inflags.GetValueInt("dump_output"))
-    {
-        dumpBufferToFile("dump_bwd_dwei_cpu.bin", dwei_host.data(), dwei_host.size());
-    }
+    //if(inflags.GetValueInt("dump_output"))
+    //{
+    //    dumpBufferToFile("dump_bwd_dwei_cpu.bin", dwei_host.data(), dwei_host.size());
+    //}
 
     //    TrySaveVerificationCache("bwd_wei", dwei_host);
     return miopenStatusSuccess;
@@ -1757,10 +1757,10 @@ int RNNSeqDriver<Tgpu, Tref>::RunBackwardDataCPU()
         printf("illegal RNN mode");
     }
 
-    if(inflags.GetValueInt("dump_output"))
-    {
-        dumpBufferToFile("dump_bwd_din_cpu.bin", din_host.data(), din_host.size());
-    }
+    //if(inflags.GetValueInt("dump_output"))
+    //{
+    //    dumpBufferToFile("dump_bwd_din_cpu.bin", din_host.data(), din_host.size());
+    //}
 
     //    TrySaveVerificationCache("bwd_dat", din_host);
     return miopenStatusSuccess;
