@@ -973,7 +973,7 @@ int RNNSeqDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
             fill_array_via_gen(dcy, hid_sz, 0.0, 1.0 * scale);
     }
 
-    //if(inflags.GetValueInt("dump_output"))
+    // if(inflags.GetValueInt("dump_output"))
     //{
     //    dumpBufferToFile("dump_in.bin", in.data(), in_host_sz);
     //    dumpBufferToFile("dump_wei.bin", wei.data(), wei_sz);
@@ -1485,7 +1485,7 @@ int RNNSeqDriver<Tgpu, Tref>::RunForwardCPU()
         printf("illegal RNN mode");
     }
 
-    //if(inflags.GetValueInt("dump_output"))
+    // if(inflags.GetValueInt("dump_output"))
     //{
     //    dumpBufferToFile("dump_fwd_out_cpu.bin", outhost.data(), outhost.size());
     //}
@@ -1615,7 +1615,7 @@ int RNNSeqDriver<Tgpu, Tref>::RunBackwardWeightsCPU()
         printf("illegal RNN mode");
     }
 
-    //if(inflags.GetValueInt("dump_output"))
+    // if(inflags.GetValueInt("dump_output"))
     //{
     //    dumpBufferToFile("dump_bwd_dwei_cpu.bin", dwei_host.data(), dwei_host.size());
     //}
@@ -1757,7 +1757,7 @@ int RNNSeqDriver<Tgpu, Tref>::RunBackwardDataCPU()
         printf("illegal RNN mode");
     }
 
-    //if(inflags.GetValueInt("dump_output"))
+    // if(inflags.GetValueInt("dump_output"))
     //{
     //    dumpBufferToFile("dump_bwd_din_cpu.bin", din_host.data(), din_host.size());
     //}
