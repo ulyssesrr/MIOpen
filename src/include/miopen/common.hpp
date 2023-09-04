@@ -29,6 +29,8 @@
 #include <miopen/manage_ptr.hpp>
 #include <miopen/miopen.h>
 
+#include <array>
+
 #if MIOPEN_BACKEND_OPENCL
 
 using Data_t = cl_mem;
@@ -54,5 +56,12 @@ using ManageDataPtr = MIOPEN_MANAGE_PTR(void, hipFree);
 inline Data_t DataCast(void* p) { return p; }
 
 inline ConstData_t DataCast(const void* p) { return p; }
+
+using StrideIndexType = int;
+using Strides3D       = std::array<StrideIndexType, 3>;
+using Strides4D       = std::array<StrideIndexType, 4>;
+using Strides5D       = std::array<StrideIndexType, 5>;
+using Strides6D       = std::array<StrideIndexType, 6>;
+
 #endif // OpenCL vs hip
 #endif // GUARD_MIOPEN_COMMON_HPP_
