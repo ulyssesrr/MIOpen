@@ -446,7 +446,7 @@ pipeline {
             description: "")
         booleanParam(
             name: "TARGET_NOGPU",
-            defaultValue: fasle,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "TARGET_VEGA10",
