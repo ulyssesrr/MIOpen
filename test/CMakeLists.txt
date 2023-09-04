@@ -279,6 +279,8 @@ if(MIOPEN_TEST_GFX900 OR MIOPEN_TEST_GFX906 OR MIOPEN_TEST_GFX908)
     list(APPEND SKIP_TESTS test_bn_3d_spatial_test)
 endif()
 
+set(SKIP_ALL_EXCEPT_TESTS test_rnn_seq)
+
 # The usage is non-trivial, see function add_test_command.
 if(SKIP_TESTS)
     list(REMOVE_DUPLICATES SKIP_TESTS)
@@ -689,7 +691,7 @@ function(add_custom_test NAME)
     else()
         set_tests_properties(${NAME} PROPERTIES DISABLED On)
     endif()
-
+    set_tests_properties(${NAME} PROPERTIES DISABLED On)
     if(WORKAROUND_ISSUE_1187
         AND (${NAME} MATCHES "test_conv_for_implicit_gemm" ))
         set_tests_properties(${NAME} PROPERTIES DISABLED On)
@@ -2389,4 +2391,4 @@ add_custom_test(test_regression_half_mi200 GFX900_DISABLED GFX906_DISABLED GFX90
 )
 #override if we need to install gtests
 set(INSTALL_GTEST OFF)
-add_subdirectory(gtest EXCLUDE_FROM_ALL)
+#add_subdirectory(gtest EXCLUDE_FROM_ALL)

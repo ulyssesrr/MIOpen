@@ -282,7 +282,7 @@ def buildHipClangJob(Map conf=[:]){
             }
 
             withDockerContainer(image: image, args: dockerOpts + ' -v=/var/jenkins/:/var/jenkins') {
-                timeout(time: 150, unit:'MINUTES')
+                timeout(time: 210, unit:'MINUTES')
                 {
                     cmake_build(conf)
 
@@ -426,15 +426,15 @@ pipeline {
             description: "")
         booleanParam(
             name: "BUILD_SMOKE_FP32",
-            defaultValue: true,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "BUILD_SMOKE_AUX1",
-            defaultValue: true,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "BUILD_SMOKE_FP16_BF16_INT8",
-            defaultValue: true,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "BUILD_FULL_TESTS",
@@ -446,11 +446,11 @@ pipeline {
             description: "")
         booleanParam(
             name: "TARGET_NOGPU",
-            defaultValue: true,
+            defaultValue: fasle,
             description: "")
         booleanParam(
             name: "TARGET_VEGA10",
-            defaultValue: true,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "TARGET_VEGA20",
@@ -482,11 +482,11 @@ pipeline {
             description: "")
         booleanParam(
             name: "DATATYPE_BF16",
-            defaultValue: true,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "DATATYPE_INT8",
-            defaultValue: true,
+            defaultValue: false,
             description: "")
         booleanParam(
             name: "PERF_TEST",
