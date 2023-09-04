@@ -32,6 +32,7 @@
 #include <miopen/tensor_layout.hpp>
 #include <miopen/bfloat16.hpp>
 #include <vector>
+#include <mutex>
 #include <cstdlib>
 #include <ctime>
 #include <tuple> // std::ignore
@@ -73,11 +74,11 @@ std::string tensor_layout_to_string(tensor_layout_t layout)
 
 static int gen_rand_integer()
 {
-    static const bool once = []() {
-        std::srand(std::time(nullptr));
-        return true;
-    }();
-    std::ignore = once;
+    static std::once_flag f;
+    std::call_once(f, []() {
+      std::srand(std::time(nullptr));
+    });
+
     return GET_RAND();
 }
 
