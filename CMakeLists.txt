@@ -259,8 +259,11 @@ set(MIOPEN_hip_VERSION ${MIOPEN_hip_VERSION_MAJOR}.${MIOPEN_hip_VERSION_MINOR}.$
 set_var_to_condition(MIOPEN_USE_HIPRTC_DEFAULT (MIOPEN_USE_COMGR AND (MIOPEN_hip_VERSION VERSION_GREATER_EQUAL 5)))
 option(MIOPEN_USE_HIPRTC "Use HIPRTC to build HIP kernels instead of COMGR" ${MIOPEN_USE_HIPRTC_DEFAULT})
 
-# WORKAROUND_SWDEV_413293
-if(${MIOPEN_hip_VERSION} VERSION_GREATER_EQUAL 5.7.23302)
+# WORKAROUND_SWDEV_413293 - do not include on Windows, error message unknown command line option
+if(NOT WIN32 AND MIOPEN_hip_VERSION VERSION_GREATER_EQUAL 5.7.23302)
+    # No assumption that HIP kernels are launched with uniform block size for backward compatibility
+    # SWDEV-413293 and https://reviews.llvm.org/D155213 effective HIP_FLAT_VERSION 500723302
+    add_compile_definitions($<$<COMPILE_LANGUAGE:CXX>:WORKAROUND_SWDEV_413293>)
     string(APPEND HIP_COMPILER_FLAGS " -fno-offload-uniform-block ")
 endif()
 
