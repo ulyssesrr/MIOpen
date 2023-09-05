@@ -30,6 +30,7 @@
 #include <miopen/gcn_asm_utils.hpp>
 #include <miopen/stringutils.hpp>
 #include <ostream>
+#include <filesystem>
 
 namespace miopen {
 
@@ -106,7 +107,12 @@ bool IsOutputInt32(const ProblemDescription& problem)
 std::string ConvDirectNaiveConvKernelName(const ProblemDescription& problem)
 {
     std::ostringstream kernel_name;
-    kernel_name << "naive_conv_";
+    if (problem.Is2d()) {
+      kernel_name << "naive_conv2d_";
+    } else {
+      kernel_name << "naive_conv3d_";
+    }
+
     if(problem.direction.IsForward())
         kernel_name << "fwd_";
     else if(problem.direction.IsBackwardData())
@@ -163,6 +169,11 @@ std::string ConvDirectNaiveConvKernelName(const ProblemDescription& problem)
         kernel_name << "int32_t";
     else
         MIOPEN_THROW("unsupported data type:");
+
+    // add function name
+    kernel_name << "<true>::kernel";
+
+    std::cout << "########## kernel_name: " << kernel_name.str() << std::endl;
 
     return kernel_name.str();
 }

@@ -23,7 +23,26 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include "miopen/common.hpp"
+// TODO(Amber): this file is compiled via HIP RTC and includes don't work easily
+// so currently duplicating content from miopen/common.hpp
+// #include "miopen/common.hpp"
+// #include <array>
+// TODO(Amber): HIP RTC redefines stuff from std library (I don't know why)
+// #include <hip/amd_detail/amd_hip_vector_types.h>
+template <typename T, unsigned N>
+class MyArray {
+  T data_[N];
+public:
+  __host__ __device__ constexpr unsigned size() const { return N; }
+
+  __host__ __device__ const T& operator[] (unsigned i) const { return data_[i]; }
+  
+};
+
+using StrideIndexType = int;
+using Strides5D       = MyArray<StrideIndexType, 5u>;
+using Strides6D       = MyArray<StrideIndexType, 6u>;
+
 
 #ifndef MIOPEN_DONT_USE_HIP_RUNTIME_HEADERS
 #include <hip/hip_fp16.h>
@@ -1871,8 +1890,8 @@ inline __device__ void naive_conv_wrw_ndhwc(const src_data_t* __restrict__ p_in,
 
 #define DEFINE_2D_NAIVE_CONV_KERNEL(direction, tensor_layout, src_data_t, acc_data_t, dst_data_t)   \
 template <bool ASSUME_PACKED>                                                                       \
-__global__ void                                                                                     \
-        naive_conv_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t(      \
+struct naive_conv2d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t {    \
+  __global__ static void kernel(                                                                    \
             src_data_t* __restrict__ p_in,                                                          \
             src_data_t* __restrict__ p_wei,                                                         \
             dst_data_t* __restrict__ p_out,                                                         \
@@ -1919,12 +1938,22 @@ __global__ void                                                                 
                                                                            fy,                      \
                                                                            fx,                      \
                                                                            group);                  \
-    }
+    }                                                                                               \
+};                                                                                                  \
+template struct                                                                                     \
+naive_conv2d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<true>;      \
+template struct                                                                                     \
+naive_conv2d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<false>;
+
+// above are explicit template instantiations (not to be confused with specializations) 
+// to force compiler to instantiate the template class or function
+
+
 
 #define DEFINE_3D_NAIVE_CONV_KERNEL(direction, tensor_layout, src_data_t, acc_data_t, dst_data_t) \
 template <bool ASSUME_PACKED>                                                                     \
-__global__ void                                                                                   \
-        naive_conv_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t(    \
+struct naive_conv3d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t {  \
+  __global__ static void kernel(                                                                  \
             src_data_t* __restrict__ p_in,                                                        \
             src_data_t* __restrict__ p_wei,                                                       \
             dst_data_t* __restrict__ p_out,                                                       \
@@ -1954,7 +1983,7 @@ __global__ void                                                                 
             int fx,                                                                               \
             int group)                                                                            \
     {                                                                                             \
-        naive_conv_##direction_##tensor_layout<ASSUME_PACKED, src_data_t, acc_data_t, dst_data_t>(\
+        naive_conv_##direction##_##tensor_layout<ASSUME_PACKED, src_data_t, acc_data_t, dst_data_t>(\
                                                                            p_in,                  \
                                                                            p_wei,                 \
                                                                            p_out,                 \
@@ -1983,7 +2012,16 @@ __global__ void                                                                 
                                                                            fy,                    \
                                                                            fx,                    \
                                                                            group);                \
-    }
+    }                                                                                             \
+};                                                                                                \
+template struct                                                                                   \
+naive_conv3d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<true>;    \
+template struct                                                                                   \
+naive_conv3d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<false>;    
+
+// above are explicit template instantiations (not to be confused with specializations) 
+// to force compiler to instantiate the template class or function
+
 /*
 #define DEFINE_2D_NAIVE_FWD_CONV_KERNEL(tensor_layout, src_data_t, acc_data_t, dst_data_t) \
     extern "C" __global__ void                                                             \
