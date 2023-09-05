@@ -107,10 +107,11 @@ bool IsOutputInt32(const ProblemDescription& problem)
 std::string ConvDirectNaiveConvKernelName(const ProblemDescription& problem)
 {
     std::ostringstream kernel_name;
-    if (problem.Is2d()) {
-      kernel_name << "naive_conv2d_";
+    // TODO(Amber): read environment variable to choose packed vs non-packed
+    if (true) {
+      kernel_name << "naive_conv_packed_";
     } else {
-      kernel_name << "naive_conv3d_";
+      kernel_name << "naive_conv_nonpacked_";
     }
 
     if(problem.direction.IsForward())
@@ -169,9 +170,6 @@ std::string ConvDirectNaiveConvKernelName(const ProblemDescription& problem)
         kernel_name << "int32_t";
     else
         MIOPEN_THROW("unsupported data type:");
-
-    // add function name
-    kernel_name << "<true>::kernel";
 
     std::cout << "########## kernel_name: " << kernel_name.str() << std::endl;
 

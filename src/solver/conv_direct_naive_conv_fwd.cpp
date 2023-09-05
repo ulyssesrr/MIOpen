@@ -106,6 +106,7 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
 
     kernel.kernel_file = ConvDirectNaiveConvKernelFile();
     kernel.kernel_name = ConvDirectNaiveConvKernelName(problem);
+    std::cout << "#############: name again: " << kernel.kernel_name << std::endl;
     kernel.g_wk.clear();
 
     kernel.g_wk.push_back(grid_size * block_size);

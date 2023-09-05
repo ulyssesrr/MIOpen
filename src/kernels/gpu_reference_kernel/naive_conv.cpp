@@ -1889,9 +1889,8 @@ inline __device__ void naive_conv_wrw_ndhwc(const src_data_t* __restrict__ p_in,
 }
 
 #define DEFINE_2D_NAIVE_CONV_KERNEL(direction, tensor_layout, src_data_t, acc_data_t, dst_data_t)   \
-template <bool ASSUME_PACKED>                                                                       \
-struct naive_conv2d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t {    \
-  __global__ static void kernel(                                                                    \
+extern "C" __global__ void \
+naive_conv_packed_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t(    \
             src_data_t* __restrict__ p_in,                                                          \
             src_data_t* __restrict__ p_wei,                                                         \
             dst_data_t* __restrict__ p_out,                                                         \
@@ -1914,46 +1913,86 @@ struct naive_conv2d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t#
             int fy,                                                                                 \
             int fx,                                                                                 \
             int group)                                                                              \
-    {                                                                                               \
-        naive_conv_##direction##_##tensor_layout<ASSUME_PACKED, src_data_t, acc_data_t, dst_data_t>(\
-                                                                           p_in,                    \
-                                                                           p_wei,                   \
-                                                                           p_out,                   \
-                                                                           in_strides,              \
-                                                                           wei_strides,             \
-                                                                           out_strides,             \
-                                                                           hi,                      \
-                                                                           wi,                      \
-                                                                           n,                       \
-                                                                           k_per_group,             \
-                                                                           c_per_group,             \
-                                                                           ho,                      \
-                                                                           wo,                      \
-                                                                           sy,                      \
-                                                                           sx,                      \
-                                                                           dy,                      \
-                                                                           dx,                      \
-                                                                           py,                      \
-                                                                           px,                      \
-                                                                           fy,                      \
-                                                                           fx,                      \
-                                                                           group);                  \
-    }                                                                                               \
-};                                                                                                  \
-template struct                                                                                     \
-naive_conv2d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<true>;      \
-template struct                                                                                     \
-naive_conv2d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<false>;
-
-// above are explicit template instantiations (not to be confused with specializations) 
-// to force compiler to instantiate the template class or function
+{                                                                                               \
+    naive_conv_##direction##_##tensor_layout<true, src_data_t, acc_data_t, dst_data_t>(\
+                                                                       p_in,                    \
+                                                                       p_wei,                   \
+                                                                       p_out,                   \
+                                                                       in_strides,              \
+                                                                       wei_strides,             \
+                                                                       out_strides,             \
+                                                                       hi,                      \
+                                                                       wi,                      \
+                                                                       n,                       \
+                                                                       k_per_group,             \
+                                                                       c_per_group,             \
+                                                                       ho,                      \
+                                                                       wo,                      \
+                                                                       sy,                      \
+                                                                       sx,                      \
+                                                                       dy,                      \
+                                                                       dx,                      \
+                                                                       py,                      \
+                                                                       px,                      \
+                                                                       fy,                      \
+                                                                       fx,                      \
+                                                                       group);                  \
+}                                                                                               \
+extern "C" __global__ void \
+naive_conv_nonpacked_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t(    \
+            src_data_t* __restrict__ p_in,                                                          \
+            src_data_t* __restrict__ p_wei,                                                         \
+            dst_data_t* __restrict__ p_out,                                                         \
+            Strides5D in_strides,                                                                   \
+            Strides5D wei_strides,                                                                  \
+            Strides5D out_strides,                                                                  \
+            int hi,                                                                                 \
+            int wi,                                                                                 \
+            int n,                                                                                  \
+            int k_per_group,                                                                        \
+            int c_per_group,                                                                        \
+            int ho,                                                                                 \
+            int wo,                                                                                 \
+            int sy,                                                                                 \
+            int sx,                                                                                 \
+            int dy,                                                                                 \
+            int dx,                                                                                 \
+            int py,                                                                                 \
+            int px,                                                                                 \
+            int fy,                                                                                 \
+            int fx,                                                                                 \
+            int group)                                                                              \
+{                                                                                               \
+    naive_conv_##direction##_##tensor_layout<false, src_data_t, acc_data_t, dst_data_t>(\
+                                                                       p_in,                    \
+                                                                       p_wei,                   \
+                                                                       p_out,                   \
+                                                                       in_strides,              \
+                                                                       wei_strides,             \
+                                                                       out_strides,             \
+                                                                       hi,                      \
+                                                                       wi,                      \
+                                                                       n,                       \
+                                                                       k_per_group,             \
+                                                                       c_per_group,             \
+                                                                       ho,                      \
+                                                                       wo,                      \
+                                                                       sy,                      \
+                                                                       sx,                      \
+                                                                       dy,                      \
+                                                                       dx,                      \
+                                                                       py,                      \
+                                                                       px,                      \
+                                                                       fy,                      \
+                                                                       fx,                      \
+                                                                       group);                  \
+}                                                                                               
 
 
 
 #define DEFINE_3D_NAIVE_CONV_KERNEL(direction, tensor_layout, src_data_t, acc_data_t, dst_data_t) \
-template <bool ASSUME_PACKED>                                                                     \
-struct naive_conv3d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t {  \
-  __global__ static void kernel(                                                                  \
+extern "C" __global__ void \
+naive_conv_packed_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t (    \
             src_data_t* __restrict__ p_in,                                                        \
             src_data_t* __restrict__ p_wei,                                                       \
             dst_data_t* __restrict__ p_out,                                                       \
@@ -1982,45 +2021,98 @@ struct naive_conv3d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t#
             int fy,                                                                               \
             int fx,                                                                               \
             int group)                                                                            \
-    {                                                                                             \
-        naive_conv_##direction##_##tensor_layout<ASSUME_PACKED, src_data_t, acc_data_t, dst_data_t>(\
-                                                                           p_in,                  \
-                                                                           p_wei,                 \
-                                                                           p_out,                 \
-                                                                           in_strides,            \
-                                                                           wei_strides,           \
-                                                                           out_strides,           \
-                                                                           di,                    \
-                                                                           hi,                    \
-                                                                           wi,                    \
-                                                                           n,                     \
-                                                                           k_per_group,           \
-                                                                           c_per_group,           \
-                                                                           do_,                   \
-                                                                           ho,                    \
-                                                                           wo,                    \
-                                                                           sz,                    \
-                                                                           sy,                    \
-                                                                           sx,                    \
-                                                                           dz,                    \
-                                                                           dy,                    \
-                                                                           dx,                    \
-                                                                           pz,                    \
-                                                                           py,                    \
-                                                                           px,                    \
-                                                                           fz,                    \
-                                                                           fy,                    \
-                                                                           fx,                    \
-                                                                           group);                \
-    }                                                                                             \
-};                                                                                                \
-template struct                                                                                   \
-naive_conv3d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<true>;    \
-template struct                                                                                   \
-naive_conv3d_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t<false>;    
-
-// above are explicit template instantiations (not to be confused with specializations) 
-// to force compiler to instantiate the template class or function
+{                                                                                             \
+    naive_conv_##direction##_##tensor_layout<true, src_data_t, acc_data_t, dst_data_t>(\
+                                                                       p_in,                  \
+                                                                       p_wei,                 \
+                                                                       p_out,                 \
+                                                                       in_strides,            \
+                                                                       wei_strides,           \
+                                                                       out_strides,           \
+                                                                       di,                    \
+                                                                       hi,                    \
+                                                                       wi,                    \
+                                                                       n,                     \
+                                                                       k_per_group,           \
+                                                                       c_per_group,           \
+                                                                       do_,                   \
+                                                                       ho,                    \
+                                                                       wo,                    \
+                                                                       sz,                    \
+                                                                       sy,                    \
+                                                                       sx,                    \
+                                                                       dz,                    \
+                                                                       dy,                    \
+                                                                       dx,                    \
+                                                                       pz,                    \
+                                                                       py,                    \
+                                                                       px,                    \
+                                                                       fz,                    \
+                                                                       fy,                    \
+                                                                       fx,                    \
+                                                                       group);                \
+}                                                                                             \
+extern "C" __global__ void \
+naive_conv_nonpacked_##direction##_##tensor_layout##_##src_data_t##_##acc_data_t##_##dst_data_t (    \
+            src_data_t* __restrict__ p_in,                                                        \
+            src_data_t* __restrict__ p_wei,                                                       \
+            dst_data_t* __restrict__ p_out,                                                       \
+            Strides6D in_strides,                                                                 \
+            Strides6D wei_strides,                                                                \
+            Strides6D out_strides,                                                                \
+            int di,                                                                               \
+            int hi,                                                                               \
+            int wi,                                                                               \
+            int n,                                                                                \
+            int k_per_group,                                                                      \
+            int c_per_group,                                                                      \
+            int do_,                                                                              \
+            int ho,                                                                               \
+            int wo,                                                                               \
+            int sz,                                                                               \
+            int sy,                                                                               \
+            int sx,                                                                               \
+            int dz,                                                                               \
+            int dy,                                                                               \
+            int dx,                                                                               \
+            int pz,                                                                               \
+            int py,                                                                               \
+            int px,                                                                               \
+            int fz,                                                                               \
+            int fy,                                                                               \
+            int fx,                                                                               \
+            int group)                                                                            \
+{                                                                                             \
+    naive_conv_##direction##_##tensor_layout<false, src_data_t, acc_data_t, dst_data_t>(\
+                                                                       p_in,                  \
+                                                                       p_wei,                 \
+                                                                       p_out,                 \
+                                                                       in_strides,            \
+                                                                       wei_strides,           \
+                                                                       out_strides,           \
+                                                                       di,                    \
+                                                                       hi,                    \
+                                                                       wi,                    \
+                                                                       n,                     \
+                                                                       k_per_group,           \
+                                                                       c_per_group,           \
+                                                                       do_,                   \
+                                                                       ho,                    \
+                                                                       wo,                    \
+                                                                       sz,                    \
+                                                                       sy,                    \
+                                                                       sx,                    \
+                                                                       dz,                    \
+                                                                       dy,                    \
+                                                                       dx,                    \
+                                                                       pz,                    \
+                                                                       py,                    \
+                                                                       px,                    \
+                                                                       fz,                    \
+                                                                       fy,                    \
+                                                                       fx,                    \
+                                                                       group);                \
+}                                                                                             
 
 /*
 #define DEFINE_2D_NAIVE_FWD_CONV_KERNEL(tensor_layout, src_data_t, acc_data_t, dst_data_t) \
