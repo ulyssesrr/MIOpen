@@ -236,7 +236,7 @@ private:
 
 int main(int argc, const char* argv[])
 {
-#if defined(_WIN32)
+#ifdef _WIN32
     SetEnvironmentVariable("MIOPEN_LOG_LEVEL", "6");
     SetEnvironmentVariable("MIOPEN_COMPILE_PARALLEL_LEVEL", "1");
     SetEnvironmentVariable("MIOPEN_ENABLE_LOGGING_ELAPSED_TIME", "1");
