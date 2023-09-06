@@ -30,6 +30,8 @@
 #include <miopen/miopen.h>
 
 #include <array>
+#include <vector>
+#include <cassert>
 
 #if MIOPEN_BACKEND_OPENCL
 
@@ -57,11 +59,55 @@ inline Data_t DataCast(void* p) { return p; }
 
 inline ConstData_t DataCast(const void* p) { return p; }
 
+// TODO(Amber): Uncomment when hip RTC accepts std::array
+// using StrideIndexType = int;
+// using Strides3D       = std::array<StrideIndexType, 3>;
+// using Strides4D       = std::array<StrideIndexType, 4>;
+// using Strides5D       = std::array<StrideIndexType, 5>;
+// using Strides6D       = std::array<StrideIndexType, 6>;
+
+template <typename T, unsigned N>
+class MyArray {
+  T data_[N];
+public:
+  __host__ __device__ constexpr unsigned size() const { return N; }
+
+  __host__ __device__ const T& operator[] (unsigned i) const { return data_[i]; }
+
+  __host__ T& operator[] (unsigned i) { return data_[i]; }
+  
+};
+
 using StrideIndexType = int;
-using Strides3D       = std::array<StrideIndexType, 3>;
-using Strides4D       = std::array<StrideIndexType, 4>;
-using Strides5D       = std::array<StrideIndexType, 5>;
-using Strides6D       = std::array<StrideIndexType, 6>;
+using Strides5D       = MyArray<StrideIndexType, 5u>;
+using Strides6D       = MyArray<StrideIndexType, 6u>;
+
+
+template <unsigned N, typename V>
+MyArray<StrideIndexType, N> MakeStrideArray(const V& vec) {
+  MyArray<StrideIndexType, N> ret;
+  assert(vec.size() == ret.size());
+
+  for (unsigned i = 0; i < N; ++i) {
+    ret[i] = static_cast<StrideIndexType>(vec[i]);
+  }
+  return ret;
+}
+
+template <typename V>
+V SplitStrideCtoGC(int group, const V& orig_strides, int C_stride_idx) {
+  assert(C_stride_idx >= 0 && C_stride_idx < orig_strides.size());
+  assert(orig_strides[C_stride_idx] % group == 0);
+
+  auto C_per_group = orig_strides[C_stride_idx] / group;
+  V ret{orig_strides};
+  ret[C_stride_idx] = C_per_group;
+
+  // insert group G to the left of C_stride_idx;
+  ret.insert(ret.begin() + C_stride_idx + 1, group);
+  
+  return ret;
+}
 
 #endif // OpenCL vs hip
 #endif // GUARD_MIOPEN_COMMON_HPP_

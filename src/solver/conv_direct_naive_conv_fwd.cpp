@@ -28,6 +28,7 @@
 #include <miopen/solver.hpp>
 #include <miopen/conv/data_invoke_params.hpp>
 #include <miopen/env.hpp>
+#include <miopen/common.hpp>
 
 MIOPEN_DECLARE_ENV_VAR(MIOPEN_DEBUG_CONV_DIRECT_NAIVE_CONV_FWD)
 
@@ -106,7 +107,6 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
 
     kernel.kernel_file = ConvDirectNaiveConvKernelFile();
     kernel.kernel_name = ConvDirectNaiveConvKernelName(problem);
-    std::cout << "#############: name again: " << kernel.kernel_name << std::endl;
     kernel.g_wk.clear();
 
     kernel.g_wk.push_back(grid_size * block_size);
@@ -119,6 +119,18 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
 
     kernel.comp_options = ConvDirectNaiveConvCompileOption(ctx);
 
+    // figure out the index of C (channel) stride so we can expand it into 
+    // (G, C_per_group)
+    int C_stride_idx = -1;
+    if (problem.IsLayoutDefault()) {
+      C_stride_idx = 1;
+    } else {
+      assert(problem.IsLayoutNHWC());
+      assert(problem.Is2d() || problem.Is3d());
+      C_stride_idx = problem.Is2d() ? 3 : 4;
+    }
+    assert(C_stride_idx != -1);
+
     if(problem.Is2d())
         result.invoker_factory = [=](const std::vector<Kernel>& kernels) {
             const auto kern = kernels[0];
@@ -127,9 +139,17 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
                 const auto& tensors     = data_ctx.tensors;
                 float elapsed           = 0;
 
+                auto in_strides = SplitStrideCtoGC(group, tensors.inDesc.GetStrides(), C_stride_idx);
+                // For weights, we split K to (G, K_per_group), which is always index 0
+                auto wei_strides = SplitStrideCtoGC(group, tensors.wDesc.GetStrides(), 0);
+                auto out_strides = SplitStrideCtoGC(group, tensors.outDesc.GetStrides(), C_stride_idx);
+
                 handle.Run(kern)(tensors.in,
                                  tensors.w,
                                  tensors.out,
+                                 MakeStrideArray<5>(in_strides),
+                                 MakeStrideArray<5>(wei_strides),
+                                 MakeStrideArray<5>(out_strides),
                                  hi,
                                  wi,
                                  n,
@@ -164,9 +184,16 @@ ConvSolution ConvDirectNaiveConvFwd::GetSolution(const ConvolutionContext& ctx,
                 const auto& tensors     = data_ctx.tensors;
                 float elapsed           = 0;
 
+                auto in_strides = SplitStrideCtoGC(group, tensors.inDesc.GetStrides(), C_stride_idx);
+                // For weights, we split K to (G, K_per_group), which is always index 0
+                auto wei_strides = SplitStrideCtoGC(group, tensors.wDesc.GetStrides(), 0);
+                auto out_strides = SplitStrideCtoGC(group, tensors.outDesc.GetStrides(), C_stride_idx);
                 handle.Run(kern)(tensors.in,
                                  tensors.w,
                                  tensors.out,
+                                 MakeStrideArray<6>(in_strides),
+                                 MakeStrideArray<6>(wei_strides),
+                                 MakeStrideArray<6>(out_strides),
                                  di,
                                  hi,
                                  wi,

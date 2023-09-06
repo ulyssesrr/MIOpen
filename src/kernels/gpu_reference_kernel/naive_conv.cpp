@@ -37,6 +37,7 @@ public:
 
   __host__ __device__ const T& operator[] (unsigned i) const { return data_[i]; }
   
+  __host__ T& operator[] (unsigned i) { return data_[i]; }
 };
 
 using StrideIndexType = int;
