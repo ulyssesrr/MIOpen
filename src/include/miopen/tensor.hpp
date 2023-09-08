@@ -188,7 +188,7 @@ struct TensorDescriptor : miopenTensorDescriptor
 
     std::size_t GetVectorLength() const;
     std::optional<miopenDataType_t> GetCastType() const;
-    void SetCastType(const miopenDataType_t cast_type_);
+    void SetCastType(miopenDataType_t cast_type_);
 
     std::size_t GetElementSize() const;
 
@@ -290,7 +290,7 @@ private:
 };
 
 template <class TElement>
-constexpr auto GetNCDHW(int spatial_dims, const std::vector<TElement>& data)
+constexpr auto GetNCDHW(unsigned spatial_dims, const std::vector<TElement>& data)
 {
     if(spatial_dims == 3)
         return miopen::tien<5>(data, 1);

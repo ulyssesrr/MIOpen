@@ -27,6 +27,7 @@
 #define GUARD_MIOPEN_GEMM_V2_HPP_
 
 #include <miopen/common.hpp>
+#include <miopen/convolution.hpp>
 #include <miopen/miopen.h>
 
 namespace miopen {
@@ -38,8 +39,6 @@ enum GemmBackend_t
 {
     nogemmbackend = 0,
     rocblas       = 1,
-    miopengemm    = 2,
-    miopentensile = 3,
 };
 
 enum CallGemmType_t
@@ -77,6 +76,7 @@ struct GemmDescriptor
     bool gfx90a_alt_impl;
     miopenDataType_t a_cast_type;
     miopenDataType_t b_cast_type;
+    ConvolutionAttribute conv_attributes;
     GemmDescriptor() {}
     GemmDescriptor(bool isColMajor_,
                    bool transA_,
@@ -131,7 +131,7 @@ miopenStatus_t CallGemmTimeMeasure(const Handle& handle,
                                    int c_offset,
                                    bool time_precision,
                                    CallGemmType_t call_gemm_type,
-                                   GemmBackend_t gemm_backend = GemmBackend_t::miopentensile);
+                                   GemmBackend_t gemm_backend = GemmBackend_t::rocblas);
 
 miopenStatus_t CallGemm(const Handle& handle,
                         GemmDescriptor gemm_desc,
@@ -141,7 +141,7 @@ miopenStatus_t CallGemm(const Handle& handle,
                         int b_offset,
                         Data_t C,
                         int c_offset,
-                        GemmBackend_t gemm_backend = GemmBackend_t::miopentensile);
+                        GemmBackend_t gemm_backend = GemmBackend_t::rocblas);
 
 miopenStatus_t CallGemmStridedBatched(const Handle& handle,
                                       GemmDescriptor gemm_desc,
@@ -151,7 +151,7 @@ miopenStatus_t CallGemmStridedBatched(const Handle& handle,
                                       int b_offset,
                                       Data_t C,
                                       int c_offset,
-                                      GemmBackend_t gemm_backend = GemmBackend_t::miopentensile);
+                                      GemmBackend_t gemm_backend = GemmBackend_t::rocblas);
 
 miopenStatus_t
 CallGemmStridedBatchedSequential(const Handle& handle,
@@ -162,7 +162,7 @@ CallGemmStridedBatchedSequential(const Handle& handle,
                                  int b_offset,
                                  Data_t C,
                                  int c_offset,
-                                 GemmBackend_t gemm_backend = GemmBackend_t::miopentensile);
+                                 GemmBackend_t gemm_backend = GemmBackend_t::rocblas);
 
 // GEMM parameters for Convolution (using Im2Col) Fwd
 // y = w * Im2Col(x)

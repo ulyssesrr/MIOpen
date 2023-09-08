@@ -110,6 +110,7 @@ set( MIOpen_Source
     ctc_api.cpp
     db.cpp
     db_record.cpp
+    driver_arguments.cpp
     dropout.cpp
     dropout_api.cpp
     execution_context.cpp
@@ -140,6 +141,8 @@ set( MIOpen_Source
     reducetensor_api.cpp
     rnn.cpp
     rnn_api.cpp
+    rnn/rnn_util.cpp
+    rnn/Solutions/rnn_transformer.cpp
     softmax_api.cpp
     solution.cpp
     conv/solver_finders.cpp
@@ -221,6 +224,7 @@ set( MIOpen_Source
     solver/conv_ocl_dir2Dfwd_exhaustive_search.cpp
     solver/conv_ocl_dir2Dfwd1x1.cpp
     solver/conv_ocl_dir2Dfwdgen.cpp
+    solver/conv_wino_fury_RxS.cpp
     solver/conv_winoRxS.cpp
     solver/conv_winoRxS_fused.cpp
     solver/fft.cpp
@@ -238,6 +242,7 @@ set( MIOpen_Source
     temp_file.cpp
     tensor.cpp
     tensor_api.cpp
+    seq_tensor.cpp
     )
 
 if(MIOPEN_ENABLE_AI_KERNEL_TUNING OR MIOPEN_ENABLE_AI_IMMED_MODE_FALLBACK)
@@ -377,8 +382,8 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/bfloat16_dev.hpp
         kernels/float_types.h
         kernels/workaround_issue_1431.hpp
-        kernels/hip_f8_impl.h
-        kernels/hip_float8.h
+        kernels/hip_f8_impl.hpp
+        kernels/hip_float8.hpp
         )
 
     set(MIOPEN_KERNELS
@@ -486,6 +491,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/Conv_Winograd_v30_3_1_fp32_f3x2_dilation2.s
         kernels/Conv_Winograd_v30_3_1_fp32_f3x2_stride1.s
         kernels/Conv_Winograd_v30_3_1_fp32_f3x2_stride2.s
+        kernels/Conv_Winograd_Fury_v1_1_1_fp16_fp16acc_f2x3_stride1.s
         kernels/MIOpenConvBwdBias.cl
         kernels/MIOpenBatchNormActivInfer.cl
         kernels/MIOpenCTCLoss.cl
@@ -555,10 +561,9 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         )
 endif()
 
-if(miopengemm_FOUND OR MIOPEN_USE_ROCBLAS OR MIOPEN_USE_MIOPENTENSILE)
+if(MIOPEN_USE_ROCBLAS)
     list(APPEND MIOpen_Source
         gemm_v2.cpp
-        miopengemm.cpp
     )
 endif()
 
@@ -759,14 +764,6 @@ elseif(MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN_BACKEND STREQUAL "HIP")
     list(APPEND PACKAGE_DEPENDS PACKAGE hip)
 endif()
 
-############################################################
-# MIOpen depends on miopengemm
-if(miopengemm_FOUND)
-    list(APPEND PACKAGE_DEPENDS PACKAGE miopengemm)
-    target_internal_library(MIOpen miopengemm)
-    list(APPEND PACKAGE_STATIC_DEPENDS PACKAGE miopengemm)
-endif()
-
 if(MIOPEN_USE_COMGR)
     list(APPEND PACKAGE_DEPENDS PACKAGE amd_comgr)
     target_internal_library(MIOpen amd_comgr)
@@ -776,11 +773,6 @@ if(rocblas_FOUND)
     target_link_libraries( MIOpen INTERFACE $<BUILD_INTERFACE:roc::rocblas> )
     target_link_libraries( MIOpen PRIVATE roc::rocblas )
     list(APPEND PACKAGE_STATIC_DEPENDS PACKAGE rocblas)
-endif()
-
-# MIOpen depends on miopentensile
-if(miopentensile_FOUND)
-    target_link_libraries(MIOpen PRIVATE MIOpenTensile)
 endif()
 
 # For backward compatibility with ROCm 5.3

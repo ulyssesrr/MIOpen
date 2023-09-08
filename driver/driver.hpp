@@ -44,7 +44,7 @@
 #include <miopen/bfloat16.hpp>
 using half         = half_float::half;
 using hip_bfloat16 = bfloat16;
-#include <miopen/hip_float8.h>
+#include <miopen/hip_float8.hpp>
 using float16 = half_float::half;
 using float8  = miopen_f8::hip_f8<miopen_f8::hip_f8_type::fp8>;
 using bfloat8 = miopen_f8::hip_f8<miopen_f8::hip_f8_type::bf8>;
@@ -168,10 +168,10 @@ inline std::string ParseBaseArg(int argc, char* argv[])
        arg != "convfp8" && arg != "convbfp8" && arg != "CBAInfer" && arg != "CBAInferfp16" &&
        arg != "pool" && arg != "poolfp16" && arg != "lrn" && arg != "lrnfp16" && arg != "activ" &&
        arg != "activfp16" && arg != "softmax" && arg != "softmaxfp16" && arg != "bnorm" &&
-       arg != "bnormfp16" && arg != "rnn" && arg != "rnnfp16" &&
-       arg != "gemm" /*&& arg != "gemmfp16"*/ && arg != "ctc" && arg != "dropout" &&
-       arg != "dropoutfp16" && arg != "tensorop" && arg != "tensoropfp16" && arg != "reduce" &&
-       arg != "reducefp16" && arg != "reducefp64" && arg != "--version")
+       arg != "bnormfp16" && arg != "rnn" && arg != "rnnfp16" && arg != "rnn_seq" &&
+       arg != "rnn_seqfp16" && arg != "gemm" /*&& arg != "gemmfp16"*/ && arg != "ctc" &&
+       arg != "dropout" && arg != "dropoutfp16" && arg != "tensorop" && arg != "tensoropfp16" &&
+       arg != "reduce" && arg != "reducefp16" && arg != "reducefp64" && arg != "--version")
     {
         printf("FAILED: Invalid Base Input Argument\n");
         Usage();

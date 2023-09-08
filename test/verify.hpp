@@ -34,9 +34,9 @@
 #include <miopen/returns.hpp>
 #include <numeric>
 #include <miopen/bfloat16.hpp>
-using half_float::half;
+using half         = half_float::half;
 using hip_bfloat16 = bfloat16;
-#include <miopen/hip_float8.h>
+#include <miopen/hip_float8.hpp>
 #include "tensor_holder.hpp"
 
 namespace miopen {
@@ -128,19 +128,19 @@ template <class R>
 bool f8_range_zero(R& r);
 
 template <>
-bool f8_range_zero<tensor<float8>>(tensor<float8>& r1)
+inline bool f8_range_zero<tensor<float8>>(tensor<float8>& r1)
 {
     return std::all_of(r1.data.begin(), r1.data.end(), [&](float8 x) { return x.is_zero(); });
 }
 
 template <>
-bool f8_range_zero<tensor<bfloat8>>(tensor<bfloat8>& r1)
+inline bool f8_range_zero<tensor<bfloat8>>(tensor<bfloat8>& r1)
 {
     return std::all_of(r1.data.begin(), r1.data.end(), [&](bfloat8 x) { return x.is_zero(); });
 }
 
 template <>
-bool f8_range_zero<tensor<float>>(tensor<float>& r1)
+inline bool f8_range_zero<tensor<float>>(tensor<float>& r1)
 {
     return std::all_of(r1.data.begin(), r1.data.end(), [](float x) { return x == 0.0; });
 }
@@ -165,7 +165,7 @@ std::size_t mismatch_idx(R1&& r1, R2&& r2, Compare compare)
 }
 
 template <class R1, class Predicate>
-long find_idx(R1&& r1, Predicate p)
+int64_t find_idx(R1&& r1, Predicate p)
 {
     auto it = std::find_if(r1.begin(), r1.end(), p);
     if(it == r1.end())
