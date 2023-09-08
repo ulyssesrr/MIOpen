@@ -174,6 +174,7 @@ rocblas_status miopen_rocblas_gemm_ex3(const miopen::Handle& handle,
                          rocblas_gemm_algo::rocblas_gemm_algo_standard,
                          0,
                          flags); // gfx90a_alt_impl));
+    return rb_status;
 #pragma clang diagnostic pop
 #endif
     MIOPEN_THROW(miopenStatusBadParm, "An appropriate version of rocBLAS is required for this op");
