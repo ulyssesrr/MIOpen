@@ -90,6 +90,7 @@ struct CheckNumericsResult
     int hasZero;
     int hasNan;
     int hasInf;
+    uint32_t infVal;
 };
 
 __device__ void thread_redux(Numerics* stats, size_t wid)
@@ -125,12 +126,16 @@ check_numerics(const T* C_d, size_t sz, CheckNumericsResult* abnormal, bool comp
         absSum += abs_val;
         minV = min(minV, val);
         maxV = max(maxV, val);
+
         if(abs_val <= static_cast<U>(0.0f))
-            abnormal->hasZero = 1;
+            abnormal->hasZero += 1;
         if(isnan(static_cast<U>(val)))
-            abnormal->hasNan = 1;
+            abnormal->hasNan += 1;
         if(isinf(static_cast<U>(val)))
-            abnormal->hasInf = 1;
+        {
+            abnormal->hasInf += 1;
+            abnormal->infVal = val;
+        }
     }
     if(computeStats)
     {

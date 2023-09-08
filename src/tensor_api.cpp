@@ -30,6 +30,7 @@
 #include <miopen/logger.hpp>
 #include <miopen/tensor.hpp>
 #include <miopen/tensor_ops.hpp>
+#include <iostream>
 
 extern "C" miopenStatus_t miopenCreateTensorDescriptor(miopenTensorDescriptor_t* tensorDesc)
 {
@@ -199,6 +200,7 @@ extern "C" miopenStatus_t miopenSetTensorCastType(miopenTensorDescriptor_t tenso
     {
         MIOPEN_LOG_FUNCTION(tensorDesc, cast_type);
     }
+	std::cout << "INSIDE MIOPENSETTENSORCASTTYPE: cast_type: " << cast_type << std::endl;
 
     return miopen::try_([&] { miopen::deref(tensorDesc).SetCastType(cast_type); });
 }

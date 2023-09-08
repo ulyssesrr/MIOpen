@@ -30,6 +30,7 @@
 #include <miopen/logger.hpp>
 #include <miopen/tensor.hpp>
 #include <miopen/datatype.hpp>
+#include <bitset>
 
 namespace miopen {
 
@@ -51,6 +52,7 @@ struct CheckNumericsResult
     int hasZero = 0;
     int hasNan  = 0;
     int hasInf  = 0;
+    uint32_t infVal = 0;
 };
 
 std::string GetKernelName(miopenDataType_t data_type)
@@ -99,8 +101,19 @@ bool checkNumericsImpl(
         MIOPEN_LOG((isAbnormal ? miopen::LoggingLevel::Warning : miopen::LoggingLevel::Info),
                    (isInput ? "INPUT " : "OUTPUT")
                        << " ptr=" << data << " zeros=" << abnormal_h.hasZero
-                       << " nans=" << abnormal_h.hasNan << " infs=" << abnormal_h.hasInf << "  {"
+                       << " nans=" << abnormal_h.hasNan << " infs=" << abnormal_h.hasInf 
+                       << " infVal= 0b"<< std::bitset<32>(abnormal_h.infVal) <<  "  {"
                        << dDesc << "}");
+        if( isAbnormal )
+        {
+            /*
+            for(size_t i = 0; i < numElements; i += 1)
+            {
+                MIOPEN_LOG((isAbnormal ? miopen::LoggingLevel::Warning : miopen::LoggingLevel::Info),
+                       (isInput ? "INPUT " : "OUTPUT") << " data(" << i << ")=" << std::to_string(static_cast<const uint16_t*>(data)[i]));
+            }
+            */
+        }
         if(computeStats != 0)
         {
             assert(numElements != 0);

@@ -400,8 +400,10 @@ static void ConvForwardCheckNumerics(const Handle& handle,
         DumpTensorToFileFromDevice(handle, tensors.xDesc, tensors.x, file_name_str + "_x.bin");
         DumpTensorToFileFromDevice(handle, tensors.wDesc, tensors.w, file_name_str + "_w.bin");
         DumpTensorToFileFromDevice(handle, tensors.yDesc, tensors.y, file_name_str + "_y.bin");
+        abort();
     }
 }
+
 
 void ConvolutionDescriptor::ConvolutionForward(Handle& handle,
                                                const void* alpha,
@@ -860,6 +862,7 @@ static void ConvBwdCheckNumerics(const Handle& handle,
         DumpTensorToFileFromDevice(handle, tensors.dyDesc, tensors.dy, file_name_str + "_dy.bin");
         DumpTensorToFileFromDevice(handle, tensors.wDesc, tensors.w, file_name_str + "_w.bin");
         DumpTensorToFileFromDevice(handle, tensors.dxDesc, tensors.dx, file_name_str + "_dx.bin");
+        abort();
     }
 }
 
@@ -1067,6 +1070,7 @@ static void ConvWrwCheckNumerics(const Handle& handle,
         DumpTensorToFileFromDevice(handle, tensors.dyDesc, tensors.dy, file_name_str + "_dy.bin");
         DumpTensorToFileFromDevice(handle, tensors.xDesc, tensors.x, file_name_str + "_x.bin");
         DumpTensorToFileFromDevice(handle, tensors.dwDesc, tensors.dw, file_name_str + "_dw.bin");
+        abort();
     }
 }
 
