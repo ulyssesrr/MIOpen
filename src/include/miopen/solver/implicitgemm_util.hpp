@@ -478,7 +478,7 @@ static inline bool is_use_amd_buffer_load_store(const ConvolutionContext& ctx)
 {
 #if WORKAROUND_MIOPEN_ISSUE_557
     const auto device_name = ctx.GetStream().GetDeviceName();
-    return !StartsWith(device_name, "gfx103");
+    return !StartsWith(device_name, "gfx103") && !StartsWith(device_name, "gfx101");
 #else
     return true;
 #endif
@@ -487,7 +487,7 @@ static inline bool is_use_amd_buffer_load_store(const ConvolutionContext& ctx)
 static inline bool is_use_v_fmac_f32(const ConvolutionContext& ctx)
 {
     const auto device_name = ctx.GetStream().GetDeviceName();
-    return StartsWith(device_name, "gfx103");
+    return StartsWith(device_name, "gfx103") || StartsWith(device_name, "gfx101");
 }
 
 static inline bool support_amd_buffer_atomic_fadd(const std::string& device_name)
@@ -608,6 +608,7 @@ static inline bool IsComposableKernelSupportedHardware(const ConvolutionContext&
            StartsWith(c.GetStream().GetDeviceName(), "gfx906") ||
            StartsWith(c.GetStream().GetDeviceName(), "gfx908") ||
            StartsWith(c.GetStream().GetDeviceName(), "gfx90a") ||
+           StartsWith(c.GetStream().GetDeviceName(), "gfx101") ||
            StartsWith(c.GetStream().GetDeviceName(), "gfx103");
 }
 

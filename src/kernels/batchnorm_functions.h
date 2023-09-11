@@ -133,7 +133,8 @@
 // MIOPEN_USE_AMDGCN may be defined before this header.
 #ifndef MIOPEN_USE_AMDGCN
 #if defined(__AMDGCN__) && \
-    !((defined(MIO_BN_GFX103X) && MIO_BN_GFX103X) || (defined(MIO_BN_GFX110X) && MIO_BN_GFX110X))
+    !((defined(MIO_BN_GFX101X) && MIO_BN_GFX101X) || (defined(MIO_BN_GFX103X) && MIO_BN_GFX103X) || \
+    (defined(MIO_BN_GFX110X) && MIO_BN_GFX110X))
 #define MIOPEN_USE_AMDGCN 1
 #else
 #define MIOPEN_USE_AMDGCN 0
@@ -155,6 +156,10 @@
 
 #ifndef MIO_RUNNING_RESULT
 #define MIO_RUNNING_RESULT 0
+#endif
+
+#ifndef MIO_BN_GFX101X
+#define MIO_BN_GFX101X 0
 #endif
 
 #ifndef MIO_BN_GFX103X

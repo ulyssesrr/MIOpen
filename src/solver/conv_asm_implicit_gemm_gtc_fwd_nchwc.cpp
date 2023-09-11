@@ -547,7 +547,7 @@ bool ConvAsmImplicitGemmGTCDynamicFwdDlopsNCHWC::IsApplicable(
         return false;
 
     const auto device_name = ctx.GetStream().GetDeviceName();
-    if((device_name != "gfx1030"))
+    if((device_name != "gfx1010") && (device_name != "gfx1030"))
         return false;
 
     if(!ctx.use_asm_kernels)

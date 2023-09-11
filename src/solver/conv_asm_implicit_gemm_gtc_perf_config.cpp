@@ -490,7 +490,7 @@ PerformanceConfigAsmImplicitGemmGTCvector::ToKernelName(const ConvolutionContext
 {
     std::ostringstream kernel_name;
     const auto device_name    = ctx.GetStream().GetDeviceName();
-    std::string gtc_str       = device_name == "gfx1030" ? "_gtcn2_" : "_gtcn_";
+    std::string gtc_str       = (device_name == "gfx1010" || device_name == "gfx1030") ? "_gtcn2_" : "_gtcn_";
     std::string vec_precision = precision == "Halfx4" ? "fp16x4" : "fp16x8";
     kernel_name << "igemm_" << direction << gtc_str << tensor_layout << "_" << vec_precision
                 << "_bx" << nxb << "_ex" << nxe << "_bt" << gemm_m_per_block << "x"
